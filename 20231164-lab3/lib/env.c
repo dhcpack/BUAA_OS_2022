@@ -123,6 +123,7 @@ int envid2env(u_int envid, struct Env **penv, int checkperm)
 }
 
 /* Overview:
+ *  初始化env_free_list env_sched_list
  *  Mark all environments in 'envs' as free and insert them into the env_free_list.
  *  Insert in reverse order,so that the first call to env_alloc() returns envs[0].
  *
@@ -390,6 +391,7 @@ load_icode(struct Env *e, u_char *binary, u_int size)
 }
 
 /* Overview:
+ *  创建进程
  *  Allocate a new env with env_alloc, load the named elf binary into
  *  it with load_icode and then set its priority value. This function is
  *  ONLY called during kernel initialization, before running the FIRST
@@ -418,6 +420,7 @@ env_create_priority(u_char *binary, int size, int priority)
 
 }
 /* Overview:
+ *  创建进程
  * Allocate a new env with default priority value.
  *
  * Hints:
@@ -433,6 +436,7 @@ env_create(u_char *binary, int size)
 
 /* Overview:
  *  Free env e and all memory it uses.
+ *  释放进程
  */
 void
 env_free(struct Env *e)
@@ -489,8 +493,9 @@ env_destroy(struct Env *e)
         /* Hint: Why this? */
         bcopy((void *)KERNEL_SP - sizeof(struct Trapframe),  // 从Kernel区域拷贝到TIMESTACK区域
               (void *)TIMESTACK - sizeof(struct Trapframe),  // CPU寄存器保存在TIMESTACK区域
-              sizeof(struct Trapframe));
+                sizeof(struct Trapframe));
         printf("i am killed ... \n");
+        LIST_REMOVE(e, env_link);
         sched_yield();
     }
 }
@@ -508,6 +513,7 @@ extern void lcontext(u_int contxt);
  * Hints:
  *  You may use these functions:
  *      env_pop_tf , lcontext.
+ * 中断当前进程，运行新进程e
  */
 /*** exercise 3.10 ***/
 void

@@ -2,11 +2,11 @@
 #include <env.h>
 #include <printf.h>
 
-extern void handle_int();
-extern void handle_reserved();
-extern void handle_tlb();
-extern void handle_sys();
-extern void handle_mod();
+extern void handle_int();       // 中断
+extern void handle_reserved();  // 保留
+extern void handle_tlb();       // tlb miss
+extern void handle_sys();       // syscall
+extern void handle_mod();       // 存储操作时，该页在TLB中被标记为只读
 unsigned long exception_handlers[32];
 void trap_init(){
 	int i;

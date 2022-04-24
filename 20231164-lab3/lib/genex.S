@@ -45,7 +45,7 @@ FEXPORT(ret_from_exception)
 
 .set noreorder
 .align	5
-NESTED(handle_int, TF_SIZE, sp)
+NESTED(handle_int, TF_SIZE, sp)  // 处理中断异常
 .set	noat
 
 //1: j 1b
@@ -58,8 +58,8 @@ mfc0	t0, CP0_CAUSE
 mfc0	t2, CP0_STATUS
 and	t0, t2
 
-andi	t1, t0, STATUSF_IP4
-bnez	t1, timer_irq
+andi	t1, t0, STATUSF_IP4  // 检查是不是4号中断位引起的中断，如果是则跳转到time_irq
+bnez	t1, timer_irq      // timer_irq: 中断服务函数
 nop
 END(handle_int)
 
