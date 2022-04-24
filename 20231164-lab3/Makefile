@@ -38,4 +38,12 @@ clean:
 		done; \
 	rm -rf *.o *~ $(vmlinux_elf)
 
+push:
+	git add .
+	git commit -m "make push"
+	git push
+
+elf:
+	/OSLAB/gxemul -E testmips -C R3000 -M 64 ./gxemul/vmlinux
+
 include include.mk
