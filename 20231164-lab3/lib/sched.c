@@ -30,29 +30,34 @@ void sched_yield(void)
      *  functions or macros below may be used (not all):
      *  LIST_INSERT_TAIL, LIST_REMOVE, LIST_FIRST, LIST_EMPTY
      */
-    if(count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
-        if(e != NULL) {
-            LIST_REMOVE(e, env_link);
-            LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_link);
-        }
+	if(count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
+		if(e != NULL) {
+			LIST_REMOVE(e, env_sched_link);
+            LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_sched_link);
+//			printf("list remove e\n");
+		}
 
         while(1) {
             if (LIST_EMPTY(&env_sched_list[point])) {
-                point = 1 - point;
-            }
+				point = 1 - point;
+//				printf("change env_sched_list\n");
+			}
             e = LIST_FIRST(&env_sched_list[point]);
             if(e -> env_status == ENV_FREE) {
-                LIST_REMOVE(e, env_link);
+                LIST_REMOVE(e, env_sched_link);
             } else if(e->env_status == ENV_NOT_RUNNABLE) {
-                LIST_REMOVE(e, env_link);
-                LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_link);
+                LIST_REMOVE(e, env_sched_link);
+                LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_sched_link);
             } else {
-                count = e->env_pri;
-                break;
+				count = e->env_pri;
+//				printf("count initial %d env_id is %d\n", count, e->env_id);
+				break;
             }
         }
     }
 
     count--;
+//	printf("count is %d\n", count);
     env_run(e);
 }
+

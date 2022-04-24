@@ -25,3 +25,4 @@ setup_c0_status STATUS_CU0|0x1001 0
 
 	nop
 END(set_timer)
+

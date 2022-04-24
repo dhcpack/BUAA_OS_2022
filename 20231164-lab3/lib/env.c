@@ -417,7 +417,7 @@ env_create_priority(u_char *binary, int size, int priority)
        and insert it into env_sched_list using LIST_INSERT_HEAD. */
     load_icode(e, binary, size);
     LIST_INSERT_HEAD(env_sched_list, e, env_sched_link);
-
+	printf("env_create id = %d\n", e->env_id);
 }
 /* Overview:
  *  创建进程
@@ -675,5 +675,6 @@ void load_icode_check() {
     env_free(e);
     printf("load_icode_check() succeeded!\n");
 }
+
 
 
