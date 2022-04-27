@@ -195,7 +195,7 @@ env_setup_vm(struct Env *e)
      *  See ./include/mmu.h for layout.
      *  Can you use boot_pgdir as a template?
      */
-    for (i = PDX(UTOP); i < 1024; i++){
+    for (i = PDX(UTOP); i < PDX(ULIM); i++){
         if(i != PDX(UVPT)){
             pgdir[i] = boot_pgdir[i];
         }
@@ -207,7 +207,7 @@ env_setup_vm(struct Env *e)
 }
 
 /* Overview:
- * 创建新进程
+ *  调用env_setup_vm为进程分配地址空间，分配栈空间，进行进程初始化
  *  Allocate and Initialize a new environment.
  *  On success, the new environment is stored in *new.
  *
@@ -225,7 +225,7 @@ env_setup_vm(struct Env *e)
  *  You should set some states of Env:
  *      id , status , the sp register, CPU status , parent_id
  *      (the value of PC should NOT be set in env_alloc)
- * 创建新进程
+ *  调用env_setup_vm为进程分配地址空间，分配栈空间，进行进程初始化
  */
 /*** exercise 3.5 ***/
 int
@@ -288,6 +288,7 @@ static int load_icode_mapper(u_long va, u_int32_t sgsize,
     int r;
     int size;
     u_long offset;
+    i = 0;
     /* Step 1: load all content of bin into memory. */
     offset = va - ROUNDDOWN(va, BY2PG);  // binsize 前面的offset
     if (offset)
@@ -297,7 +298,7 @@ static int load_icode_mapper(u_long va, u_int32_t sgsize,
             if((r = page_alloc(&p)) != 0){
                 return r;
             }
-            page_insert(env->env_pgdir, p, va, PTE_R);  // 为什么要加PTE_R
+            page_insert(env->env_pgdir, p, va, PTE_R);
         }
         size = MIN(bin_size, BY2PG - offset);
         bcopy((void *)bin, (void *)(page2kva(p) + offset), size);
@@ -309,7 +310,7 @@ static int load_icode_mapper(u_long va, u_int32_t sgsize,
         if((r = page_alloc(&p)) != 0){
             return r;
         }
-        page_insert(env->env_pgdir, p, va + i, PTE_R);  // 为什么要加PTE_R
+        page_insert(env->env_pgdir, p, va + i, PTE_R);
         size = MIN(bin_size - i, BY2PG);
         bcopy((void *)(bin + i), (void *)(page2kva(p)), size);
         i += size;
@@ -324,7 +325,7 @@ static int load_icode_mapper(u_long va, u_int32_t sgsize,
             if((r = (page_alloc(&p))) != 0) {
                 return r;
             }
-            page_insert(env->env_pgdir, p, va + i, PTE_R);  // 为什么要加PTE_R
+            page_insert(env->env_pgdir, p, va + i, PTE_R);
         }
         size = MIN(sgsize - i, BY2PG - offset);
         bzero((void *)(page2kva(p) + offset), size);
@@ -336,8 +337,8 @@ static int load_icode_mapper(u_long va, u_int32_t sgsize,
         if((r = page_alloc(&p)) != 0){
             return r;
         }
-        page_insert(env->env_pgdir, p, va + i, PTE_R);  // 为什么要加PTE_R
-        size = MIN(bin_size - i, BY2PG);
+        page_insert(env->env_pgdir, p, va + i, PTE_R);
+        size = MIN(sgsize - i, BY2PG);
         bzero((void *)(page2kva(p)), size);
         i += size;
     }
@@ -391,7 +392,7 @@ load_icode(struct Env *e, u_char *binary, u_int size)
 }
 
 /* Overview:
- *  创建进程
+ *  调用env_alloc进行进程初始化，调用load_icode加载ELF，创建进程
  *  Allocate a new env with env_alloc, load the named elf binary into
  *  it with load_icode and then set its priority value. This function is
  *  ONLY called during kernel initialization, before running the FIRST
@@ -399,6 +400,7 @@ load_icode(struct Env *e, u_char *binary, u_int size)
  *
  * Hints:
  *  this function wraps the env_alloc and load_icode function.
+ *  调用env_alloc进行进程初始化，调用load_icode加载ELF，创建进程
  */
 /*** exercise 3.8 ***/
 void
@@ -417,7 +419,7 @@ env_create_priority(u_char *binary, int size, int priority)
        and insert it into env_sched_list using LIST_INSERT_HEAD. */
     load_icode(e, binary, size);
     LIST_INSERT_HEAD(env_sched_list, e, env_sched_link);
-	printf("env_create id = %d\n", e->env_id);
+	// printf("env_create id = %d\n", e->env_id);
 }
 /* Overview:
  *  创建进程
@@ -480,6 +482,7 @@ env_free(struct Env *e)
 
 /* Overview:
  *  Free env e, and schedule to run a new env if e is the current env.
+ *  释放当前进程，运行新进程
  */
 void
 env_destroy(struct Env *e)
@@ -539,7 +542,7 @@ env_run(struct Env *e)
      *   environment   registers and return to user mode.
      *
      * Hint: You should use GET_ENV_ASID there. Think why?
-     *   (read <see mips run linux>, page 135-144)
+     *   (read <see mips run linux>, page 135-144)  // a1要被放到CP0_ENTRYHI中，其格式要求为GET_ENV_ASID(e->env_id)
      */
     // 调用 env_pop_tf 函数，恢复现场、异常返回。
     env_pop_tf(&(e->env_tf), GET_ENV_ASID(e->env_id));  // 这个函数的a1是干什么用的

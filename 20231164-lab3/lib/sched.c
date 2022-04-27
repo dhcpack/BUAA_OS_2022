@@ -33,7 +33,7 @@ void sched_yield(void)
 	if(count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
 		if(e != NULL) {
 			LIST_REMOVE(e, env_sched_link);
-            LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_sched_link);
+            LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_sched_link);  // 在env_sched_list中操作节点要用env_sched_link
 //			printf("list remove e\n");
 		}
 
