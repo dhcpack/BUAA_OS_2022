@@ -473,7 +473,10 @@ env_free(struct Env *e)
     /* Hint: free the ASID */
     asid_free(e->env_id >> (1 + LOG2NENV));
     page_decref(pa2page(pa));
+    // 删除页目录管理的所有页面及页目录本身，以上是依次遍历页目录的过程
+
     /* Hint: return the environment to the free list. */
+    // 将进程加到free_list中，并在调度队列中删除进程
     e->env_status = ENV_FREE;
     LIST_INSERT_HEAD(&env_free_list, e, env_link);
     LIST_REMOVE(e, env_sched_link);
@@ -526,7 +529,7 @@ env_run(struct Env *e)
      *   you should switch the context and save the registers. 
      *   You can imitate env_destroy() 's behaviors.*/
     if(curenv) {
-        bcopy((void *)TIMESTACK - sizeof(struct Trapframe), // source: TIMESTACK区域存储的CPU寄存器
+        bcopy((void *)TIMESTACK - sizeof(struct Trapframe), // source: TIMESTACK区域存储中断时的CPU寄存器
               (void *)(&(curenv->env_tf)), sizeof(struct Trapframe));  // target: 当前进程的env_tf区域
         curenv->env_tf.pc = curenv->env_tf.cp0_epc;  // 当前进程的pc设置成cp0_epc寄存器中的值
     }

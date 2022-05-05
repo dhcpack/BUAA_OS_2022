@@ -14,7 +14,7 @@
 #include <asm/asm.h>
 
 /*** exercise 3.12 ***/
-.section .text.exc_vec3
+.section .text.exc_vec3       // 这个值设定在scse0_3.lds中
 NESTED(except_vec3, 0, sp)
     .set noat 
     .set noreorder

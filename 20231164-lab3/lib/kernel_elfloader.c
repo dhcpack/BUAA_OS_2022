@@ -83,7 +83,6 @@ int load_elf(u_char *binary, int size, u_long *entry_point, void *user_data,
         }
 
         *entry_point = ehdr->e_entry;
-//		printf("Xxxxxxxxxxxxxxxxx  entry point: 0x%x\n", *entry_point);
-		return 0;
+	return 0;
 }
 

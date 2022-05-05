@@ -56,10 +56,10 @@ CLI
 .set	at
 mfc0	t0, CP0_CAUSE
 mfc0	t2, CP0_STATUS
-and	t0, t2
+and	t0, t2                   // t0中保存中断号
 
 andi	t1, t0, STATUSF_IP4  // 检查是不是4号中断位引起的中断，如果是则跳转到time_irq
-bnez	t1, timer_irq      // timer_irq: 中断服务函数
+bnez	t1, timer_irq        // timer_irq: 中断服务函数
 nop
 END(handle_int)
 

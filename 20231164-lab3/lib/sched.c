@@ -38,7 +38,7 @@ void sched_yield(void)
 		}
 
         while(1) {
-            if (LIST_EMPTY(&env_sched_list[point])) {
+            while (LIST_EMPTY(&env_sched_list[point])) {
 				point = 1 - point;
 //				printf("change env_sched_list\n");
 			}
