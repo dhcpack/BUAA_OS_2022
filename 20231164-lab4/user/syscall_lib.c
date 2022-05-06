@@ -4,7 +4,7 @@
 #include <env.h>
 #include <trap.h>
 
-void syscall_putchar(char ch)
+void syscall_putchar(char ch)  // 用户端的系统调用
 {
 	msyscall(SYS_putchar, (int)ch, 0, 0, 0, 0);
 }

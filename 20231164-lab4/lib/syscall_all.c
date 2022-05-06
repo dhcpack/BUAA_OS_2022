@@ -13,6 +13,7 @@ extern struct Env *curenv;
  *
  * Pre-Condition:
  * 	`c` is the character you want to print.
+ * 内核态中系统调用的实现
  */
 void sys_putchar(int sysno, int c, int a2, int a3, int a4, int a5)
 {
@@ -63,10 +64,15 @@ u_int sys_getenvid(void)
  *
  * Note:
  *  For convenience, you can just give up the current time slice.
+ * sched_yield
  */
 /*** exercise 4.6 ***/
 void sys_yield(void)
 {
+	// 从Kernel系统中断区域拷贝到TIMESTACK时钟中断区域
+	bcopy((void *)KERNEL_SP - sizeof(struct Trapframe), (void *)TIMESTACK - sizeof(struct Trapframe), sizeof(struct Trapframe));
+	sched_yield();  // 时钟调度其它进程
+    return;
 }
 
 /* Overview:
@@ -145,8 +151,24 @@ int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
 	struct Env *env;
 	struct Page *ppage;
 	int ret;
-	ret = 0;
+	
+	if(va >= UTOP) {
+		return -E_INVAL;
+	}
+	if(((perm & PTE_COW) == 1) || ((perm & PTE_V) == 0)) {
+		return -E_INVAL;
+	}
 
+	if((ret = envid2env(envid, &env, 1)) != 0) {  //TODO 这里的checkperm应该时0还是1 
+		return ret;
+	}
+	if((ret = page_alloc(&ppage) != 0)) {
+		return ret;
+	}
+	if((ret = page_insert(env->env_pgdir, ppage, va, perm)) != 0) {
+		return ret;  // page_insert里面自带remove掉之前的页面
+	}
+	return 0;
 }
 
 /* Overview:
@@ -161,6 +183,7 @@ int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
  *
  * Note:
  * 	Cannot access pages above UTOP.
+ * // page_alloc，page_insert，page_lookup
  */
 /*** exercise 4.4 ***/
 int sys_mem_map(int sysno, u_int srcid, u_int srcva, u_int dstid, u_int dstva,
@@ -179,8 +202,34 @@ int sys_mem_map(int sysno, u_int srcid, u_int srcva, u_int dstid, u_int dstva,
 	round_dstva = ROUNDDOWN(dstva, BY2PG);
 
     //your code here
+	if(srcva >= UTOP || dstva >= UTOP) {
+		return -E_INVAL;
+	}
+	if((perm & PTE_V) == 0) {  // not valid
+		return -E_INVAL;
+	}
 
-	return ret;
+	if((ret = envid2env(srcid, &srcenv, 0)) != 0) {  //TODO 这里的checkperm应该时0还是1 
+		return ret;
+	}
+	if((ret = envid2env(dstid, &dstenv, 0)) != 0) {  //TODO 这里的checkperm应该时0还是1 
+		return ret;
+	}
+
+	ppage = page_lookup(srcenv->env_pgdir, round_srcva, &ppte);
+	if (ppage == NULL) {
+		return -E_INVAL;
+	}
+
+	//you can't go from non-writable to writable?
+	if(((*ppte & PTE_R) == 0) && ((perm & PTE_R) == 1)) {
+		return -E_INVAL;
+	}
+
+	if((ret = page_insert(dstenv->env_pgdir, ppage, round_dstva, perm)) != 0) {
+		return ret;  // page_insert里面自带remove掉之前的页面
+	}
+	return 0;
 }
 
 /* Overview:
@@ -199,7 +248,17 @@ int sys_mem_unmap(int sysno, u_int envid, u_int va)
 	int ret;
 	struct Env *env;
 
-	return ret;
+	if(va >= UTOP) {
+		return -E_INVAL;
+	}
+
+	if((ret = envid2env(envid, &env, 0)) != 0) {  //TODO 这里的checkperm应该时0还是1 
+		return ret;
+	}
+
+	page_remove(env->env_pgdir, va);
+
+	return 0;
 	//	panic("sys_mem_unmap not implemented");
 }
 
@@ -299,6 +358,18 @@ void sys_panic(int sysno, char *msg)
 /*** exercise 4.7 ***/
 void sys_ipc_recv(int sysno, u_int dstva)
 {
+	if(dstva >= UTOP) {
+		return;
+	}
+	// 首先要将自身的env_ipc_recving设置为1，表明该进程准备接受发送方的消息
+	// 之后给env_ipc_dstva赋值，表明自己要将接受到的页面与dstva完成映射
+	// 阻塞当前进程，即把当前进程的状态置为不可运行（ENV_NOT_RUNNABLE）
+	// 最后放弃CPU（调用相关函数重新进行调度），安心等待发送方将数据发送过来
+	curenv->env_ipc_recving = 1;
+	curenv->env_ipc_dstva = dstva;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	sys_yield();
+    return;
 }
 
 /* Overview:
@@ -326,6 +397,38 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 	int r;
 	struct Env *e;
 	struct Page *p;
+	// 根据envid找到相应进程，如果指定进程为可接收状态(考虑env_ipc_recving)，则发送成功
+	// 否则，函数返回-E_IPC_NOT_RECV，表示目标进程未处于接受状态
+	// 清除接收进程的接收状态，将相应数据填入进程控制块，传递物理页面的映射关系
+	// 修改进程控制块中的进程状态，使接受数据的进程可继续运行(ENV_RUNNABLE)
+	if(srcva >= UTOP) {
+		return -E_INVAL;
+	}
+	if((r = envid2env(envid, &e, 0)) != 0) {
+		return r;
+	}
+	if(e->env_ipc_recving == 0) {
+		return -E_IPC_NOT_RECV;
+	}
+    if(e->env_ipc_dstva >= UTOP) {
+        return -E_INVAL;
+    }
 
+    if(srcva != 0) {
+		p = page_lookup(curenv->env_pgdir, srcva, NULL);
+		if(p == NULL) {
+			return -E_INVAL;
+		}
+		if((r = page_insert(e->env_pgdir, p, e->env_ipc_dstva, perm)) != 0){
+			return r;
+		}
+	}
+
+	e->env_ipc_from = curenv->env_id;
+	e->env_ipc_value = value;
+	e->env_ipc_perm = perm;
+	e->env_ipc_recving = 0;
+	e->env_status = ENV_RUNNABLE;
 	return 0;
 }
+

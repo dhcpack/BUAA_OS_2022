@@ -50,7 +50,7 @@ void trap_init();
 
 #endif /* !__ASSEMBLER__ */
 /*
- * 为汇编语言定义的trap frame寄存器
+ * 为汇编语言定义的trap frame寄存器(stackframe.h)
  * Stack layout for all exceptions:
  *
  * ptrace needs to have all regs on the stack. If the order here is changed,
