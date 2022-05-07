@@ -175,3 +175,4 @@ extern volatile Pde* vpd[];  // page entry 页目录项指针数组
 extern void tlb_out(u_int entryhi);
 #endif //!__ASSEMBLER__
 #endif // !_MMU_H_
+

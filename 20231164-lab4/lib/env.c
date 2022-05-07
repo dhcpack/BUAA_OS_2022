@@ -257,7 +257,6 @@ env_alloc(struct Env **new, u_int parent_id)
 
     /* Step 5: Remove the new Env from env_free_list. */
     LIST_REMOVE(e, env_link);
-    // LIST_INSERT_TAIL(env_sched_list, e, env_sched_link);
     *new = e;
     return 0;
 }
@@ -682,6 +681,7 @@ void load_icode_check() {
     env_free(e);
     printf("load_icode_check() succeeded!\n");
 }
+
 
 
 

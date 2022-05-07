@@ -109,3 +109,4 @@ void trap_init();
  */
 #define TF_SIZE		((TF_PC)+4)
 #endif /* _TRAP_H_ */
+

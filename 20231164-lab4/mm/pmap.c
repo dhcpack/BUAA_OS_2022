@@ -222,6 +222,7 @@ void page_init(void)
 			LIST_INSERT_HEAD(&page_free_list, current_page, pp_link);  // pp_link is type LIST_ENTRY(Page)
 		}
 	}
+//	printf("page init success\n");
 }
 
 /* Exercise 2.4 */

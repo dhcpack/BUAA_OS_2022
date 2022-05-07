@@ -301,7 +301,7 @@ int sys_env_alloc(void)
 	e->env_pri = curenv->env_pri;
 	e->env_status = ENV_NOT_RUNNABLE;  // except that status is set to ENV_NOT_RUNNABLE
 
-	return e->env_id;  // 返回新(子)进程的envid，父进程根据这个envid为子进程做初始化
+	return e->env_id;
 	//	panic("sys_env_alloc not implemented");
 }
 
@@ -333,8 +333,7 @@ int sys_set_env_status(int sysno, u_int envid, u_int status)
 	}
 	if(status == ENV_RUNNABLE && env->env_status != ENV_RUNNABLE) {
 		LIST_INSERT_TAIL(env_sched_list, env, env_sched_link);  // TODO 这句话是必要的吗 env_sched_list里面的env块都是ENV_RUNNABLE吗
-	}
-	if(status != ENV_RUNNABLE && env->env_status == ENV_RUNNABLE) {
+	} else if(status != ENV_RUNNABLE && env->env_status == ENV_RUNNABLE) {
 		LIST_REMOVE(env, env_sched_link);
 	}
 	env->env_status = status;
@@ -343,7 +342,9 @@ int sys_set_env_status(int sysno, u_int envid, u_int status)
 		env_destroy(env);
 	}
 	// printf("finish\n");
-
+	LIST_FOREACH(env, env_sched_list, env_sched_link) {
+        printf("envid is %d, env_status is %d\n", env->env_id, env->env_status);
+    }     
 	return 0;
 	//	panic("sys_env_set_status not implemented");
 }
@@ -470,4 +471,5 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 	e->env_status = ENV_RUNNABLE;
 	return 0;
 }
+
 

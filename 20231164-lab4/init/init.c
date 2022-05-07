@@ -11,16 +11,21 @@ void mips_init() {
 
 	mips_vm_init();
 	page_init();
+//	printf("page init success\n");
 
 	env_init();
-
-	ENV_CREATE(user_tltest);
-	// ENV_CREATE(user_fktest);
-	// ENV_CREATE(user_pingpong);
+//	printf("env init success\n");
+	
+//	ENV_CREATE(user_tltest);
+//	 ENV_CREATE(user_fktest);
+	ENV_CREATE(user_pingpong);
+//	ENV_CREATE(user_f_t);
+//	printf("env create success\n");
 
 	trap_init();
+//	printf("trap init success\n");
 	kclock_init();
-
+//	printf("kclock init success\n");
 
 	while(1);
 	panic("init.c:\tend of mips_init() reached!");
