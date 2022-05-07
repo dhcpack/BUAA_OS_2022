@@ -35,7 +35,7 @@ IS_BD:
     lw      t4, 20(t0)                  // t4 <- the 6th argument of msyscall
 
     // TODO: Allocate a space of six arguments on current kernel stack and copy the six arguments to proper location
-    lw      a0, TF_REG4(sp)
+    lw      a0, TF_REG4(sp)             // 从Trap Frame寄存器拷贝到当前寄存器
     lw      a1, TF_REG5(sp)
     lw      a2, TF_REG6(sp)
     lw      a3, TF_REG7(sp)

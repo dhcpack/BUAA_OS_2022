@@ -85,6 +85,9 @@ END(do_reserved)
 	.extern tlbra
 .set	noreorder
 NESTED(do_refill,0 , sp)
+// 处理缺页中断：如果物理页面在页表中存在，则会将其填入 TLB 并 返回异常地址再次执行内存存取的指令。
+// 如果物理页面不存在，则会触发一个一般意义的缺页错误，并跳转到 mm/pmap.c 中的 pageout 函数中。
+// 如果存取地址是合法的用户空间地址，内核会为对应地址分配并映射一个物理页面（被动地分配页面）来解 决缺页的问题。
 			//li	k1, '?'
 			//sb	k1, 0x90000000
 			.extern	mCONTEXT

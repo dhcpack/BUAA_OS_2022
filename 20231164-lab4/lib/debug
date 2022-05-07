@@ -1,0 +1,512 @@
+
+Simple setup...
+    net: simulating 10.0.0.0/8 (max outgoing: TCP=100, UDP=100)
+        simulated gateway: 10.0.0.254 (60:50:40:30:20:10)
+            using nameserver 202.112.128.51, domain "s."
+    machine "default":
+        memory: 64 MB
+        cpu0: R3000 (I+D = 4+4 KB)
+        machine: MIPS test machine
+        loading ./gxemul/vmlinux
+        starting cpu0 at 0x80010000
+-------------------------------------------------------------------------------
+
+main.c: main is start ...
+
+init.c: mips_init() is called
+
+Physical memory: 65536K available, base = 65536K, extended = 0K
+
+to memory 80401000 for struct page directory.
+
+to memory 80431000 for struct Pages.
+
+pmap.c:  mips vm init success
+
+pageout:        @@@___0x7f3fe000___@@@  ins a page 
+
+pageout:        @@@___0x406000___@@@  ins a page 
+
+newenvid get: newenvid = 3073
+
+pageout:        @@@___0x7fe00000___@@@  ins a page 
+
+pageout:        @@@___0x7fffb000___@@@  ins a page 
+
+envid is 3073, env_status is 1
+
+newenvid get: newenvid = 5122
+
+pageout:        @@@___0x4000c4___@@@  ins a page 
+
+pageout:        @@@___0x401000___@@@  ins a page 
+
+pageout:        @@@___0x402000___@@@  ins a page 
+
+pageout:        @@@___0x403000___@@@  ins a page 
+
+pageout:        @@@___0x404000___@@@  ins a page 
+
+pageout:        @@@___0x405000___@@@  ins a page 
+
+pageout:        @@@___0x406000___@@@  ins a page 
+
+pageout:        @@@___0x407000___@@@  ins a page 
+
+pageout:        @@@___0x408000___@@@  ins a page 
+
+pageout:        @@@___0x409000___@@@  ins a page 
+
+pageout:        @@@___0x40a000___@@@  ins a page 
+
+pageout:        @@@___0x40b000___@@@  ins a page 
+
+pageout:        @@@___0x40c000___@@@  ins a page 
+
+pageout:        @@@___0x40d000___@@@  ins a page 
+
+pageout:        @@@___0x40e000___@@@  ins a page 
+
+pageout:        @@@___0x40f000___@@@  ins a page 
+
+pageout:        @@@___0x410000___@@@  ins a page 
+
+pageout:        @@@___0x411000___@@@  ins a page 
+
+pageout:        @@@___0x412000___@@@  ins a page 
+
+pageout:        @@@___0x413000___@@@  ins a page 
+
+pageout:        @@@___0x414000___@@@  ins a page 
+
+pageout:        @@@___0x415000___@@@  ins a page 
+
+pageout:        @@@___0x416000___@@@  ins a page 
+
+pageout:        @@@___0x417000___@@@  ins a page 
+
+pageout:        @@@___0x418000___@@@  ins a page 
+
+pageout:        @@@___0x419000___@@@  ins a page 
+
+pageout:        @@@___0x41a000___@@@  ins a page 
+
+pageout:        @@@___0x41b000___@@@  ins a page 
+
+pageout:        @@@___0x41c000___@@@  ins a page 
+
+pageout:        @@@___0x41d000___@@@  ins a page 
+
+pageout:        @@@___0x41e000___@@@  ins a page 
+
+pageout:        @@@___0x41f000___@@@  ins a page 
+
+pageout:        @@@___0x420000___@@@  ins a page 
+
+pageout:        @@@___0x421000___@@@  ins a page 
+
+pageout:        @@@___0x422000___@@@  ins a page 
+
+pageout:        @@@___0x423000___@@@  ins a page 
+
+pageout:        @@@___0x424000___@@@  ins a page 
+
+pageout:        @@@___0x425000___@@@  ins a page 
+
+pageout:        @@@___0x426000___@@@  ins a page 
+
+pageout:        @@@___0x427000___@@@  ins a page 
+
+pageout:        @@@___0x428000___@@@  ins a page 
+
+pageout:        @@@___0x429000___@@@  ins a page 
+
+pageout:        @@@___0x42a000___@@@  ins a page 
+
+pageout:        @@@___0x42b000___@@@  ins a page 
+
+pageout:        @@@___0x42c000___@@@  ins a page 
+
+pageout:        @@@___0x42d000___@@@  ins a page 
+
+pageout:        @@@___0x42e000___@@@  ins a page 
+
+pageout:        @@@___0x42f000___@@@  ins a page 
+
+pageout:        @@@___0x430000___@@  ins a page 
+
+pageout:        @@@___0x431000___@@@  ins a page 
+
+pageout:        @@@___0x432000___@@@  ins a page 
+
+pageout:        @@@___0x433000___@@@  ins a page 
+
+pageout:        @@@___0x434000___@@@  ins a page 
+
+pageout:        @@@___0x435000___@@@  ins a page 
+
+pageout:        @@@___0x436000___@@@  ins a page 
+
+pageout:        @@@___0x437000___@@@  ins a page 
+
+pageout:        @@@___0x438000___@@@  ins a page 
+
+pageout:        @@@___0x439000___@@@  ins a page 
+
+pageout:        @@@___0x43a000___@@@  ins a page 
+
+pageout:        @@@___0x43b000___@@@  ins a page 
+
+pageout:        @@@___0x43c000___@@@  ins a page 
+
+pageout:        @@@___0x43d000___@@@  ins a page 
+
+pageout:        @@@___0x43e000___@@@  ins a page 
+
+pageout:        @@@___0x43f000___@@@  ins a page 
+
+pageout:        @@@___0x440000___@@@  ins a page 
+
+pageout:        @@@___0x441000___@@@  ins a page 
+
+pageout:        @@@___0x442000___@@@  ins a page 
+
+pageout:        @@@___0x443000___@@@  ins a page 
+
+pageout:        @@@___0x444000___@@@  ins a page 
+
+pageout:        @@@___0x445000___@@@  ins a page 
+
+pageout:        @@@___0x446000___@@@  ins a page 
+
+pageout:        @@@___0x447000___@@@  ins a page 
+
+pageout:        @@@___0x448000___@@@  ins a page 
+
+pageout:        @@@___0x449000___@@@  ins a page 
+
+pageout:        @@@___0x44a000___@@@  ins a page 
+
+pageout:        @@@___0x44b000___@@@  ins a page 
+
+pageout:        @@@___0x44c000___@@@  ins a page 
+
+pageout:        @@@___0x44d000___@@@  ins a page 
+
+pageout:        @@@___0x44e000___@@@  ins a page 
+
+pageout:        @@@___0x44f000___@@@  ins a page 
+
+pageout:        @@@___0x450000___@@@  ins a page 
+
+pageout:        @@@___0x451000___@@@  ins a page 
+
+pageout:        @@@___0x452000___@@@  ins a page 
+
+pageout:        @@@___0x453000___@@@  ins a page 
+
+pageout:        @@@___0x454000___@@@  ins a page 
+
+pageout:        @@@___0x455000___@@@  ins a page 
+
+pageout:        @@@___0x456000___@@@  ins a page 
+
+pageout:        @@@___0x457000___@@@  ins a page 
+
+pageout:        @@@___0x458000___@@@  ins a page 
+
+pageout:        @@@___0x459000___@@@  ins a page 
+
+pageout:        @@@___0x45a000___@@@  ins a page 
+
+pageout:        @@@___0x45b000___@@@  ins a page 
+
+pageout:        @@@___0x45c000___@@@  ins a page 
+
+pageout:        @@@___0x45d000___@@@  ins a page 
+
+pageout:        @@@___0x45e000___@@@  ins a page 
+
+pageout:        @@@___0x45f000___@@@  ins a page 
+
+pageout:        @@@___0x460000___@@@  ins a page 
+
+pageout:        @@@___0x461000___@@@  ins a page 
+
+pageout:        @@@___0x462000___@@@  ins a page 
+
+pageout:        @@@___0x463000___@@@  ins a page 
+
+pageout:        @@@___0x464000___@@@  ins a page 
+
+pageout:        @@@___0x465000___@@@  ins a page 
+
+pageout:        @@@___0x466000___@@@  ins a page 
+
+pageout:        @@@___0x467000___@@@  ins a page 
+
+pageout:        @@@___0x468000___@@@  ins a page 
+
+pageout:        @@@___0x469000___@@@  ins a page 
+
+pageout:        @@@___0x46a000___@@@  ins a page 
+
+pageout:        @@@___0x46b000___@@@  ins a page 
+
+pageout:        @@@___0x46c000___@@@  ins a page 
+
+pageout:        @@@___0x46d000___@@@  ins a page 
+
+pageout:        @@@___0x46e000___@@@  ins a page 
+
+pageout:        @@@___0x46f000___@@@  ins a page 
+
+pageout:        @@@___0x470000___@@@  ins a page 
+
+pageout:        @@@___0x471000___@@@  ins a page 
+
+pageout:        @@@___0x472000___@@@  ins a page 
+
+pageout:        @@@___0x473000___@@@  ins a page 
+
+pageout:        @@@___0x474000___@@@  ins a page 
+
+pageout:        @@@___0x475000___@@@  ins a page 
+
+pageout:        @@@___0x476000___@@@  ins a page 
+
+pageout:        @@@___0x477000___@@@  ins a page 
+
+pageout:        @@@___0x478000___@@@  ins a page 
+
+pageout:        @@@___0x479000___@@@  ins a page 
+
+pageout:        @@@___0x47a000___@@@  ins a page 
+
+pageout:        @@@___0x47b000___@@@  ins a page 
+
+pageout:        @@@___0x47c000___@@@  ins a page 
+
+pageout:        @@@___0x47d000___@@@  ins a page 
+
+pageout:        @@@___0x47e000___@@@  ins a page 
+
+pageout:        @@@___0x47f000___@@@  ins a page 
+
+pageout:        @@@___0x480000___@@@  ins a page 
+
+pageout:        @@@___0x481000___@@@  ins a page 
+
+pageout:        @@@___0x482000___@@@  ins a page 
+
+pageout:        @@@___0x483000___@@@  ins a page 
+
+pageout:        @@@___0x484000___@@@  ins a page 
+
+pageout:        @@@___0x485000___@@@  ins a page 
+
+pageout:        @@@___0x486000___@@@  ins a page 
+
+pageout:        @@@___0x487000___@@@  ins a page 
+
+pageout:        @@@___0x488000___@@@  ins a page 
+
+pageout:        @@@___0x489000___@@@  ins a page 
+
+pageout:        @@@___0x48a000___@@@  ins a page 
+
+pageout:        @@@___0x48b000___@@@  ins a page 
+
+pageout:        @@@___0x48c000___@@@  ins a page 
+
+pageout:        @@@___0x48d000___@@@  ins a page 
+
+pageout:        @@@___0x48e000___@@@  ins a page 
+
+pageout:        @@@___0x48f000___@@@  ins a page 
+
+envid is 3073, env_status is 1
+
+envid is 5122, env_status is 1
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:pageout:      @@@___0x490000___@@@  ins a page 
+
+pageout:        @@@___0x491000___@@@  ins a page 
+
+pageout:        @@@___0x492000___@@@  ins a page 
+
+pageout:        @@@___0x493000___@@@  ins a page 
+
+pageout:        @@@___0x494000___@@@  ins a page 
+
+pageout:        @@@___0x495000___@@@  ins a page 
+
+pageout:        @@@___0x496000___@@@  ins a page 
+
+pageout:        @@@___0x497000___@@@  ins a page 
+
+pageout:        @@@___0x498000___@@@  ins a page 
+
+pageout:        @@@___0x4000c4___@@@  ins a page 
+
+pageout:        @@@___0x401000___@@@  ins a page 
+
+3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+                this is child2 :a:3
+
+pageout:        @@@___0x499000___@@@  ins a page 
+
+pageout:        @@@___0x49a000___@@@  ins a page 
+
+pageout:        @@@___0x49b000___@@@  ins a page 
+
+pageout:        @@@___0x49c000___@@@  ins a page 
+
+pageout:        @@@___0x49d000___@@@  ins a page 
+
+pageout:        @@@___0x49e000___@@@  ins a page 
+
+pageout:        @@@___0x49f000___@@@  ins a page 
+
+pageout:        @@@___0x4a0000___@@@  ins a page 
+
+pageout:        @@@___0x4a1000___@@@  ins a page 
+
+pageout:        @@@___0x4a2000___@@@  ins a page 
+
+pageout:        @@@___0x4a3000___@@@  ins a page 
+
+pageout:        @@@___0x4a4000___@@@  ins a page 
+
+pageout:        @@@___0x4a5000___@@@  ins a page 
+
+pageout:        @@@___0x4a6000___@@@  ins a page 
+
+pageout:        @@@___0x4a7000___@@@  ins a page 
+
+pageout:        @@@___0x4a8000___@@@  ins a page 
+
+pageout:        @@@___0x4a9000___@@@  ins a page 
+
+pageout:        @@@___0x4aa000___@@@  ins a page 
+
+pageout:        @@@___0x4ab000___@@@  ins a page 
+
+pageout:        @@@___0x4ac000___@@@  ins a page 
+
+pageout:        @@@___0x4ad000___@@@  ins a page 
+
+pageout:        @@@___0x4ae000___@@@  ins a page 
+
+pageout:        @@@___0x4af000___@@@  ins a page 
+
+pageout:        @@@___0x4b0000___@@@  ins a page 
+
+pageout:        @@@___0x4b1000___@@@  ins a page 
+
+pageout:        @@@___0x4b2000___@@@  ins a page 
+
+pageout:        @@@___0x4b3000___@@@  ins a page 
+
+pageout:        @@@___0x4b4000___@@@  ins a page 
+
+GXemul> 

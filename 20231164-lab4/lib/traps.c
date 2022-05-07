@@ -18,8 +18,8 @@ void trap_init()
     }
 
     set_except_vector(0, handle_int);
-    set_except_vector(1, handle_mod);
-    set_except_vector(2, handle_tlb);
+    set_except_vector(1, handle_mod);  // 处理写时复制特性的内核函数
+    set_except_vector(2, handle_tlb);  // 处理缺页中断
     set_except_vector(3, handle_tlb);
     set_except_vector(8, handle_sys);
 }
@@ -50,6 +50,7 @@ page_fault_handler(struct Trapframe *tf)
             bcopy(&PgTrapFrame,(void *)curenv->env_xstacktop - sizeof(struct  Trapframe),sizeof(struct Trapframe));
         }
     // TODO: Set EPC to a proper value in the trapframe
+    tf->cp0_epc = curenv->env_pgfault_handler;  // env_pgfault_handler为__asm_pgfault_handler函数地址
 
     return;
 }

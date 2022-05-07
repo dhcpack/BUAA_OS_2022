@@ -95,10 +95,11 @@ int envid2env(u_int envid, struct Env **penv, int checkperm)
     /* Hint: If envid is zero, return curenv.*/
     /* Step 1: Assign value to e using envid. */
     if(envid == 0){
-        e = curenv;
-    } else{
-        e = &envs[ENVX(envid)];  // 根据低十位取env
+        *penv = curenv;
+        return 0;
     }
+
+    e = &envs[ENVX(envid)];  // 根据低十位取env
 
     if (e->env_status == ENV_FREE || e->env_id != envid) {  // 低十位相等只能说明在envs中存储的地址一样，不能证明e就是我们要找的进程块
         *penv = 0;
@@ -256,6 +257,7 @@ env_alloc(struct Env **new, u_int parent_id)
 
     /* Step 5: Remove the new Env from env_free_list. */
     LIST_REMOVE(e, env_link);
+    // LIST_INSERT_TAIL(env_sched_list, e, env_sched_link);
     *new = e;
     return 0;
 }

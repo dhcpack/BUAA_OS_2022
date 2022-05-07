@@ -52,21 +52,22 @@ nop
 
 .set noreorder
 .text
-.globl __asm_pgfault_handler
+.globl __asm_pgfault_handler   // env_pgfault_handler区域设置为这个函数的地址
 __asm_pgfault_handler:
 	// save the caller-save registers
 	//	(your code here)
 //1: j 1b
 nop
-	lw	a0, TF_BADVADDR(sp)
+	lw	a0, TF_BADVADDR(sp)  // 读取CP0_BADVADDR,这个值 也正是 CPU 设置的发生页写入异常的地址
 	//sw	t0, (sp)
 	//subu	sp,16
-	lw	t1, __pgfault_handler
-	jalr	t1
+	lw	t1, __pgfault_handler  // 将这个CP0_BADVADDR作为参数去调用了__pgfault_handler这个函数指针对应的函数，其指向的函数就是“真正”进行处理的函数。
+	jalr	t1                                                 // __pgfault_handler其实是fork.c中pgfault函数指针，这才是是“真正”进行处理的函数
 
 nop
 	// push trap-time eip, eflags onto trap-time stack
 	//	(your code here)
+	// 用于恢复现场的汇编
 	//addu	sp,16
 	lw	v1,TF_LO(sp)
 		mtlo	v1
@@ -103,5 +104,5 @@ nop
 		lw	$2,TF_REG2(sp)
 		lw	$1,TF_REG1(sp)
 		lw	k0,TF_EPC(sp) 	//atomic operation needed
-		jr	k0
+		jr	k0              // 使用 MIPS 的延时槽特性，在跳转的同时恢复了正常的栈指针。
 		lw	sp,TF_REG29(sp)  /* Deallocate stack */

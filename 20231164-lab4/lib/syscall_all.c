@@ -121,7 +121,12 @@ int sys_set_pgfault_handler(int sysno, u_int envid, u_int func, u_int xstacktop)
 	// Your code here.
 	struct Env *env;
 	int ret;
+	if((ret = envid2env(envid, &env, 0)) != 0) {
+		return ret;
+	}
 
+	env->env_pgfault_handler = func;
+	env->env_xstacktop = xstacktop;
 
 	return 0;
 	//	panic("sys_set_pgfault_handler not implemented");
@@ -159,7 +164,7 @@ int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
 		return -E_INVAL;
 	}
 
-	if((ret = envid2env(envid, &env, 1)) != 0) {  //TODO 这里的checkperm应该时0还是1 
+	if((ret = envid2env(envid, &env, 1)) != 0) {  //TODO 这里的checkperm应该时0还是1  env may modify its own address space or the address space of its children
 		return ret;
 	}
 	if((ret = page_alloc(&ppage) != 0)) {
@@ -280,9 +285,23 @@ int sys_env_alloc(void)
 	// Your code here.
 	int r;
 	struct Env *e;
+	if((r = env_alloc(&e, curenv->env_id)) != 0) {
+		return r;
+	}
+	// 复制运行现场
+	bcopy((void *)(KERNEL_SP - sizeof(struct Trapframe)), (void *)&(e->env_tf), sizeof(struct Trapframe));
 
+	// 设置子进程的程序计数器  cp0_epc中的值已经加过4了 即syscall的后一条指令
+	e->env_tf.pc = e->env_tf.cp0_epc;
 
-	return e->env_id;
+	// 更改子进程返回值 $v0 = 0
+	e->env_tf.regs[2] = 0;
+
+	// 其它初始化
+	e->env_pri = curenv->env_pri;
+	e->env_status = ENV_NOT_RUNNABLE;  // except that status is set to ENV_NOT_RUNNABLE
+
+	return e->env_id;  // 返回新(子)进程的envid，父进程根据这个envid为子进程做初始化
 	//	panic("sys_env_alloc not implemented");
 }
 
@@ -304,6 +323,26 @@ int sys_set_env_status(int sysno, u_int envid, u_int status)
 	// Your code here.
 	struct Env *env;
 	int ret;
+
+	if((ret = envid2env(envid, &env, 0)) != 0){
+		return ret;
+	}
+	// printf("status is %d, env status is %d\n", status, env->env_status);
+	if (!(status == ENV_FREE || status == ENV_RUNNABLE || status == ENV_NOT_RUNNABLE)) {
+		return -E_INVAL;
+	}
+	if(status == ENV_RUNNABLE && env->env_status != ENV_RUNNABLE) {
+		LIST_INSERT_TAIL(env_sched_list, env, env_sched_link);  // TODO 这句话是必要的吗 env_sched_list里面的env块都是ENV_RUNNABLE吗
+	}
+	if(status != ENV_RUNNABLE && env->env_status == ENV_RUNNABLE) {
+		LIST_REMOVE(env, env_sched_link);
+	}
+	env->env_status = status;
+	// printf("set succeed\n");
+	if(env->env_status == ENV_FREE) {
+		env_destroy(env);
+	}
+	// printf("finish\n");
 
 	return 0;
 	//	panic("sys_env_set_status not implemented");

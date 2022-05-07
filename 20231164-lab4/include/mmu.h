@@ -36,7 +36,7 @@
 #define PTE_V		0x0200	// Valid bit
 #define PTE_R		0x0400	// Dirty bit ,'0' means only read ,otherwise make interrupt
 #define PTE_D		0x0002	// fileSystem Cached is dirty
-#define PTE_COW		0x0001	// Copy On Write
+#define PTE_COW		0x0001	// Copy On Write  写时复制，调用fork时采用的虚拟页面保护机制
 #define PTE_UC		0x0800	// unCached
 #define PTE_LIBRARY		0x0004	// share memmory
 /*
@@ -98,7 +98,7 @@
 #define UENVS (UPAGES - PDMAP)
 
 #define UTOP UENVS
-#define UXSTACKTOP (UTOP)
+#define UXSTACKTOP (UTOP)   // 异常处理栈
 #define TIMESTACK 0x82000000
 
 #define USTACKTOP (UTOP - 2*BY2PG)
@@ -140,8 +140,8 @@ extern u_long npage;
 typedef u_long Pde;
 typedef u_long Pte;
 
-extern volatile Pte* vpt[];
-extern volatile Pde* vpd[];
+extern volatile Pte* vpt[];  // page table 页表项指针数组
+extern volatile Pde* vpd[];  // page entry 页目录项指针数组
 
 #define PADDR(kva)						\
 ({								\

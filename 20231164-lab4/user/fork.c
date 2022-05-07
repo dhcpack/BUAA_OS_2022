@@ -83,16 +83,33 @@ static void
 pgfault(u_int va)
 {
 	u_int *tmp;
+	tmp = USTACKTOP;   // 页面的地址还是用指针类型存^-^
+	u_int perm = ((Pte *)(*vpt))[va >> PGSHIFT] & 0xfff;
 	//	writef("fork.c:pgfault():\t va:%x\n",va);
+	if((perm & PTE_COW) != 1) {
+		user_panic("faulting page is not copy-on-write");
+	}
+	perm -= PTE_COW;
+	va = ROUNDDOWN(va, BY2PG);
+	int ret;
 
-	//map the new page at a temporary place
+	//map the new page at a temporary place  在没用的虚拟地址处位置申请一个临时物理页面(利用这个虚拟地址进行复制？)
+	if((ret = syscall_mem_alloc(0, tmp, perm)) != 0) {
+		user_panic("syscall_mem_alloc failed");
+	}
 
 	//copy the content
+	user_bcopy(va, tmp, BY2PG);   // 复制页面内容(用虚拟地址索引，进行物理页面意义上的复制)
 
-	//map the page on the appropriate place
+	//map the page on the appropriate place  将复制好的页面绑定到恰当位置
+	if ((ret = syscall_mem_map(0, tmp, 0, va, perm)) != 0) {
+		user_panic("syscall_mem_map failed");
+	}
 
-	//unmap the temporary place
-
+	//unmap the temporary placev 将临时页面解绑
+	if((ret = syscall_mem_unmap(0, tmp)) != 0){
+		user_panic("syscall_mem_unmap failed");
+	}
 }
 
 /* Overview:
@@ -110,6 +127,12 @@ pgfault(u_int va)
  * 	PTE_LIBRARY indicates that the page is shared between processes.
  * A page with PTE_LIBRARY may have PTE_R at the same time. You
  * should process it correctly.
+ * vpt: // 自映射页表向虚拟地址
+	.word UVPT
+	vpd: // 自映射页目录虚拟地址
+	.word (UVPT+(UVPT>>12)*4)
+	extern volatile Pte* vpt[];
+	extern volatile Pde* vpd[];
  */
 /*** exercise 4.10 ***/
 static void
@@ -118,6 +141,13 @@ duppage(u_int envid, u_int pn)
 	u_int addr;
 	u_int perm;
 
+	addr = pn << PGSHIFT;  // virtual address = pn * BY2PG   pn: virtual page
+	perm = ((Pte *)(*vpt))[pn] & 0xfff;  // *vpt是页表项虚拟地址，((Pte *)(*vpt))是一个指向第一个页表项的指针，((Pte *)(*vpt))[pn]是第pn个页表项
+	if(((perm & PTE_R) == 1) && ((perm & PTE_LIBRARY) == 0)) {
+		perm = perm | PTE_COW;
+		syscall_mem_map(0, addr, 0, addr, perm); // 需要同时改变当前进程，也就是父进程0 -> current_env;
+	}
+	syscall_mem_map(0, addr, envid, addr, perm);
 	//	user_panic("duppage not implemented");
 }
 
@@ -141,13 +171,37 @@ fork(void)
 	extern struct Env *env;
 	u_int i;
 
+    // The parent installs pgfault using set_pgfault_handler                                                                                                    
+    set_pgfault_handler(pgfault);  // 父进程设置异常处理函数
+    writef("father process set handler success\n");
+    // alloc a new alloc
+    newenvid = syscall_env_alloc();
+    writef("newenvid get: newenvid = %d\n", newenvid);
+    if(newenvid == 0) { // 子进程
+        env = envs + ENVX(syscall_getenvid());
+        writef("child process finish\n");
+        return 0;
+    }
 
-	//The parent installs pgfault using set_pgfault_handler
+	writef("dump page begin\n");
+	// 遍历父进程地址空间，进行duppage。
+	for (i = 0; i < VPN(USTACKTOP); i++) {
+        if((((Pde *)(*vpd))[i>>10] & PTE_V) && (((Pde *)(*vpd))[i] & PTE_V)){
+            duppage(newenvid, i);
+        }
+    }
+    writef("duppage finish\n");
 
-	//alloc a new alloc
-
-
-	return newenvid;
+    // 为子进程分配异常处理栈。
+    syscall_mem_alloc(newenvid, UXSTACKTOP - BY2PG, PTE_V | PTE_R);  // 子进程分配异常栈空间
+    writef("stack set succees\n");
+    // 设置子进程的异常处理函数，确保页写入异常可以被正常处理。    
+	syscall_set_pgfault_handler(newenvid, __asm_pgfault_handler, UXSTACKTOP);  // 子进程设置异常处理函数
+    writef("handler set succees\n");
+    // 设置子进程的运行状态
+    syscall_set_env_status(newenvid, ENV_RUNNABLE);
+    writef("status set succees\n");
+    return newenvid;
 }
 
 // Challenge!
