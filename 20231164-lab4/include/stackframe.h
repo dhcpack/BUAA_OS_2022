@@ -12,7 +12,7 @@
 .endm
 
 
-.macro CLI
+.macro CLI                          // 屏蔽中断位
 	mfc0	t0, CP0_STATUS
 	li	t1, (STATUS_CU0 | 0x1)
 	or	t0, t1
@@ -163,10 +163,11 @@
 1:
 	bltz	sp, 2f
 	nop
-	lw	sp, KERNEL_SP
+	lw	sp, KERNEL_SP           // 栈指针变成内核态栈指针
 	nop
 
 2:	nop
 
 
 .endm
+

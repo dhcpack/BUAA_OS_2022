@@ -140,8 +140,8 @@ extern u_long npage;
 typedef u_long Pde;
 typedef u_long Pte;
 
-extern volatile Pte* vpt[];  // page table 页表项指针数组
-extern volatile Pde* vpd[];  // page entry 页目录项指针数组
+extern volatile Pte* vpt[];  // page table 页表项指针数组，记录页表项的虚拟地址
+extern volatile Pde* vpd[];  // page entry 页目录项指针数组，记录页目录项的虚拟地址
 
 #define PADDR(kva)						\
 ({								\
@@ -175,4 +175,5 @@ extern volatile Pde* vpd[];  // page entry 页目录项指针数组
 extern void tlb_out(u_int entryhi);
 #endif //!__ASSEMBLER__
 #endif // !_MMU_H_
+
 

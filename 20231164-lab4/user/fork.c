@@ -152,7 +152,6 @@ duppage(u_int envid, u_int pn)
 	if(flag == 1) {
 		syscall_mem_map(0, addr, 0, addr, perm); // 需要同时改变当前进程，也就是父进程0 -> current_env;
 	}
-	
     //	user_panic("duppage not implemented");
 }
 
@@ -186,10 +185,10 @@ fork(void)
         return 0;
     }
 
-//	writef("dump page begin\n");
+    //	writef("dump page begin\n");
     // 遍历父进程地址空间，进行duppage。
     for (i = 0; i < VPN(USTACKTOP); i++) {
-        if(((*vpd)[i>>10] & PTE_V) && ((*vpt)[i] & PTE_V)){
+        if((((Pde *)(*vpd))[i>>10] & PTE_V) && (((Pte *)(*vpt))[i] & PTE_V)){
             duppage(newenvid, i);
         }
     }
@@ -214,5 +213,6 @@ sfork(void)
     user_panic("sfork not implemented");
     return -E_INVAL;
 }
+
 
 

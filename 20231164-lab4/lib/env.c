@@ -70,6 +70,7 @@ static void asid_free(u_int i) {
 u_int mkenvid(struct Env *e) {
     u_int idx = e - envs;
     u_int asid = asid_alloc();
+    // 正常生成的envid第10位必为1，便于envid2env传入0得到当前结构体功能的实现
     return (asid << (1 + LOG2NENV)) | (1 << LOG2NENV) | idx;
 }
 
@@ -203,7 +204,7 @@ env_setup_vm(struct Env *e)
     }
 
     /* UVPT maps the env's own page table, with read-only permission.*/
-    e->env_pgdir[PDX(UVPT)] = e->env_cr3 | PTE_V;
+    e->env_pgdir[PDX(UVPT)] = e->env_cr3 | PTE_V;  // 这个物理地址就是二级页表所在的物理地址
     return 0;
 }
 
@@ -253,7 +254,7 @@ env_alloc(struct Env **new, u_int parent_id)
 
     /* Step 4: Focus on initializing the sp register and cp0_status of env_tf field, located at this new Env. */
     e->env_tf.regs[29] = USTACKTOP;    // sp register 用户栈栈顶
-    e->env_tf.cp0_status = 0x1000100c; // CPU status
+    e->env_tf.cp0_status = 0x1000100c; // CPU status   rfe之后KUC = 1(表示在用户态) IEC = 1(表示开启中断)
 
     /* Step 5: Remove the new Env from env_free_list. */
     LIST_REMOVE(e, env_link);
@@ -388,7 +389,7 @@ load_icode(struct Env *e, u_char *binary, u_int size)
     load_elf(binary, size, &entry_point, (void *)e, load_icode_mapper);
 
     /* Step 4: Set CPU's PC register as appropriate value. */
-    e->env_tf.pc = entry_point;
+    e->env_tf.pc = entry_point;   // 设置新进程的pc寄存器为elf文件的入口点
 }
 
 /* Overview:
@@ -529,7 +530,7 @@ env_run(struct Env *e)
     /* Hint: if there is an environment running, 
      *   you should switch the context and save the registers. 
      *   You can imitate env_destroy() 's behaviors.*/
-    if(curenv) {
+    if(curenv) {  // 此时当前进程已经被时钟中断了，将上下文环境从TIMESTACK拷贝到TrapFrame中保存起来 ？？？
         bcopy((void *)TIMESTACK - sizeof(struct Trapframe), // source: TIMESTACK区域存储中断时的CPU寄存器
               (void *)(&(curenv->env_tf)), sizeof(struct Trapframe));  // target: 当前进程的env_tf区域
         curenv->env_tf.pc = curenv->env_tf.cp0_epc;  // 当前进程的pc设置成cp0_epc寄存器中的值
@@ -547,7 +548,7 @@ env_run(struct Env *e)
      * Hint: You should use GET_ENV_ASID there. Think why?
      *   (read <see mips run linux>, page 135-144)  // a1要被放到CP0_ENTRYHI中，其格式要求为GET_ENV_ASID(e->env_id)
      */
-    // 调用 env_pop_tf 函数，恢复现场、异常返回。
+    // 调用 env_pop_tf 函数，恢复现场(有从TrapFrame中取出寄存器的值到当前环境的操作)、异常返回。
     env_pop_tf(&(e->env_tf), GET_ENV_ASID(e->env_id));  // 这个函数的a1是干什么用的
 }
 
@@ -681,6 +682,7 @@ void load_icode_check() {
     env_free(e);
     printf("load_icode_check() succeeded!\n");
 }
+
 
 
 

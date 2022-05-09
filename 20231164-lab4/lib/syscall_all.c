@@ -65,11 +65,12 @@ u_int sys_getenvid(void)
  * Note:
  *  For convenience, you can just give up the current time slice.
  * sched_yield
+ *  放弃当前进程
  */
 /*** exercise 4.6 ***/
 void sys_yield(void)
 {
-	// 从Kernel系统中断区域拷贝到TIMESTACK时钟中断区域
+	// 从Kernel系统中断区域拷贝到TIMESTACK时钟中断区域, 因为env_run默认保存在TIMESTACK区域
 	bcopy((void *)KERNEL_SP - sizeof(struct Trapframe), (void *)TIMESTACK - sizeof(struct Trapframe), sizeof(struct Trapframe));
 	sched_yield();  // 时钟调度其它进程
     return;
@@ -160,7 +161,7 @@ int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
 	if(va >= UTOP) {
 		return -E_INVAL;
 	}
-	if(((perm & PTE_COW) == 1) || ((perm & PTE_V) == 0)) {
+	if(((perm & PTE_COW) != 0) || ((perm & PTE_V) == 0)) {
 		return -E_INVAL;
 	}
 
@@ -227,7 +228,7 @@ int sys_mem_map(int sysno, u_int srcid, u_int srcva, u_int dstid, u_int dstva,
 	}
 
 	//you can't go from non-writable to writable?
-	if(((*ppte & PTE_R) == 0) && ((perm & PTE_R) == 1)) {
+	if(((*ppte & PTE_R) == 0) && ((perm & PTE_R) != 0)) {
 		return -E_INVAL;
 	}
 
@@ -285,7 +286,7 @@ int sys_env_alloc(void)
 	// Your code here.
 	int r;
 	struct Env *e;
-	if((r = env_alloc(&e, curenv->env_id)) != 0) {
+	if((r = env_alloc(&e, curenv->env_id)) != 0) {  // 新建的进程页表和页目录是不同的
 		return r;
 	}
 	// 复制运行现场
@@ -295,13 +296,13 @@ int sys_env_alloc(void)
 	e->env_tf.pc = e->env_tf.cp0_epc;
 
 	// 更改子进程返回值 $v0 = 0
-	e->env_tf.regs[2] = 0;
+	e->env_tf.regs[2] = 0;  // 子进程的返回值被赋值为0，在进程被调度时返回
 
 	// 其它初始化
 	e->env_pri = curenv->env_pri;
 	e->env_status = ENV_NOT_RUNNABLE;  // except that status is set to ENV_NOT_RUNNABLE
 
-	return e->env_id;
+	return e->env_id;   // 父进程的返回值是新建的子进程的envid
 	//	panic("sys_env_alloc not implemented");
 }
 
@@ -342,9 +343,9 @@ int sys_set_env_status(int sysno, u_int envid, u_int status)
 		env_destroy(env);
 	}
 	// printf("finish\n");
-	LIST_FOREACH(env, env_sched_list, env_sched_link) {
-        printf("envid is %d, env_status is %d\n", env->env_id, env->env_status);
-    }     
+	// LIST_FOREACH(env, env_sched_list, env_sched_link) {
+    //     printf("envid is %d, env_status is %d\n", env->env_id, env->env_status);
+    // }     
 	return 0;
 	//	panic("sys_env_set_status not implemented");
 }
@@ -471,5 +472,6 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 	e->env_status = ENV_RUNNABLE;
 	return 0;
 }
+
 
 

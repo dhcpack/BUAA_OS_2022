@@ -5,9 +5,10 @@
 /*** exercise 4.1 ***/
 LEAF(msyscall)
     // TODO: you JUST need to execute a `syscall` instruction and return from msyscall
-    syscall
+    syscall  // 调用syscall陷入内核态
 	nop
-	jr ra
+	jr ra    // 跳转返回
     nop
 END(msyscall)
+
 

@@ -29,6 +29,8 @@ nop
 	END(handle_\exception)
 .endm
 
+// ret_from_exception从同一进程的内核态回到用户态，没有改变CPU地址空间，不需要保存所有上下文环境，只需要更改一下栈指针到用户态
+// env_pop_tf改变进程，更改所有寄存器的值为新进程TrapFrame中的数值
 FEXPORT(ret_from_exception)
 	.set noat
 	.set noreorder
@@ -38,7 +40,7 @@ FEXPORT(ret_from_exception)
 	lw	sp,TF_REG29(sp) /* Deallocate stack */  
 //1:	j	1b
 	nop
-	jr	k0								 
+	jr	k0	            // jr返回到epc寄存器保存的指令地址							 
 	rfe								 
 
 
@@ -160,6 +162,3 @@ END(do_refill)
 BUILD_HANDLER reserved do_reserved cli
 BUILD_HANDLER tlb	do_refill	cli
 BUILD_HANDLER mod	page_fault_handler cli
-
-
-

@@ -17,7 +17,7 @@ void mips_init() {
 //	printf("env init success\n");
 	
 //	ENV_CREATE(user_tltest);
-//	 ENV_CREATE(user_fktest);
+//  ENV_CREATE(user_fktest);
 	ENV_CREATE(user_pingpong);
 //	ENV_CREATE(user_f_t);
 //	printf("env create success\n");

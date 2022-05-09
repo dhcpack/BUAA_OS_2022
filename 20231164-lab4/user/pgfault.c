@@ -28,11 +28,9 @@ set_pgfault_handler(void (*fn)(u_int va))
 			writef("cannot set pgfault handler\n");
 			return;
 		}
-
 		//		panic("set_pgfault_handler not implemented");
 	}
 
 	// Save handler pointer for assembly to call.
-	__pgfault_handler = fn;
+	__pgfault_handler = fn;   // __asm_pgfault_handler会调用__pgfault_handler
 }
-
