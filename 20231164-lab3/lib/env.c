@@ -20,7 +20,6 @@ extern char *KERNEL_SP;
 
 static u_int asid_bitmap[2] = {0}; // 64
 
-
 /* Overview:
  *  This function is to allocate an unused ASID
  *
@@ -95,8 +94,9 @@ int envid2env(u_int envid, struct Env **penv, int checkperm)
     /* Hint: If envid is zero, return curenv.*/
     /* Step 1: Assign value to e using envid. */
     if(envid == 0){
-        e = curenv;
-    } else{
+        *penv = curenv;
+		return 0;
+	} else{
         e = &envs[ENVX(envid)];  // 根据低十位取env
     }
 
@@ -680,6 +680,7 @@ void load_icode_check() {
     env_free(e);
     printf("load_icode_check() succeeded!\n");
 }
+
 
 
 

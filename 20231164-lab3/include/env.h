@@ -28,8 +28,7 @@ struct Env {
 	u_int env_cr3;                  // physical address of page dir  保存了该进程页目录的物理地址。
 	LIST_ENTRY(Env) env_sched_link; // env schedule link  构造调度队列
     u_int env_pri;                  // env priority  保存了该进程的优先级
-	// add in Lab3-2-extra
-	u_int time_to_run;
+
 	// Lab 4 IPC
 	u_int env_ipc_value;            // data value sent to us 
 	u_int env_ipc_from;             // envid of the sender  
@@ -84,4 +83,5 @@ void env_run(struct Env *e);
 }
 
 #endif // !_ENV_H_
+
 
