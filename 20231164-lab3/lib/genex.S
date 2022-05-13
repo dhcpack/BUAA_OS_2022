@@ -152,10 +152,43 @@ nop
 			nop
 END(do_refill)
 
+.set	noreorder
+NESTED(do_adel, TF_SIZE, sp)
+	lw	k0,TF_EPC(sp)
+	// lw	sp,TF_REG29(sp)
+	nop
+	// mfc0	t0,CP0_EPC
+	lw      t1,0(k0)
+	nop
+	addi    t3, t1, 0
+	
+	srl     t1, 26
+	beq     t1, 0x23, islw
+	beq     t1, 0x21, islh
+//	and     t1,0xfc000000
+//	nop
+//	beq     t1, 0x8c000000, islw
+//	nop
+//	beq     t1, 0x84000000, islh
+//	nop
+	// jr ra
+	// nop
+islw:
+	and     t3,0x03ffffff
+	or  t3,0x84000000
+	sw  t3,0(k0)
+	jr ra
+	nop
+islh:
+	and     t3,0x03ffffff
+	or  t3, 0x80000000
+	sw  t3,0(k0)
+	jr ra
+	nop
+END(do_adel)
 
 
 BUILD_HANDLER reserved do_reserved cli
 BUILD_HANDLER tlb	do_refill	cli
 BUILD_HANDLER mod	page_fault_handler cli
-
-
+BUILD_HANDLER adel	do_adel cli

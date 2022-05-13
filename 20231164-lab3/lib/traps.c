@@ -7,6 +7,7 @@ extern void handle_reserved();  // 保留
 extern void handle_tlb();       // tlb miss
 extern void handle_sys();       // syscall
 extern void handle_mod();       // 存储操作时，该页在TLB中被标记为只读
+extern void handle_adel();
 unsigned long exception_handlers[32];
 void trap_init(){
 	int i;
@@ -16,6 +17,7 @@ void trap_init(){
 	set_except_vector(1, handle_mod);
 	set_except_vector(2, handle_tlb);
 	set_except_vector(3, handle_tlb);
+	set_except_vector(4, handle_adel);
 	set_except_vector(8, handle_sys);
 }
 void *set_except_vector(int n, void * addr){
