@@ -12,7 +12,6 @@ void mips_init() {
 	mips_vm_init();
 	page_init();
 //	printf("page init success\n");
-
 	env_init();
 //	printf("env init success\n");
 	
