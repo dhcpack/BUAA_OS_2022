@@ -165,7 +165,7 @@ int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
 		return -E_INVAL;
 	}
 
-	if((ret = envid2env(envid, &env, 1)) != 0) {  //TODO 这里的checkperm应该时0还是1  env may modify its own address space or the address space of its children
+	if((ret = envid2env(envid, &env, 1)) != 0) {  //TODO 这里的checkperm应该是1  env may modify its own address space or the address space of its children
 		return ret;
 	}
 	if((ret = page_alloc(&ppage) != 0)) {
@@ -227,8 +227,8 @@ int sys_mem_map(int sysno, u_int srcid, u_int srcva, u_int dstid, u_int dstva,
 		return -E_INVAL;
 	}
 
-	//you can't go from non-writable to writable?
-	if(((*ppte & PTE_R) == 0) && ((perm & PTE_R) != 0)) {
+	//you can't go from non-writable to writable
+	if(((*ppte & PTE_R) == 0) && ((perm & PTE_R) != 0)) {  // 不能从不可写页面映射到可写页面
 		return -E_INVAL;
 	}
 
@@ -292,7 +292,7 @@ int sys_env_alloc(void)
 	// 复制运行现场
 	bcopy((void *)(KERNEL_SP - sizeof(struct Trapframe)), (void *)&(e->env_tf), sizeof(struct Trapframe));
 
-	// 设置子进程的程序计数器  cp0_epc中的值已经加过4了 即syscall的后一条指令
+	// 设置子进程的程序计数器  cp0_epc中的值已经加过4了 即syscall的后一条指令 相当于子进程的entry_point
 	e->env_tf.pc = e->env_tf.cp0_epc;
 
 	// 更改子进程返回值 $v0 = 0
@@ -434,7 +434,6 @@ void sys_ipc_recv(int sysno, u_int dstva)
 int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 					 u_int perm)
 {
-
 	int r;
 	struct Env *e;
 	struct Page *p;
@@ -472,6 +471,3 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 	e->env_status = ENV_RUNNABLE;
 	return 0;
 }
-
-
-

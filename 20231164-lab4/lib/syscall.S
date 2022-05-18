@@ -34,7 +34,7 @@ IS_BD:
     lw      t2, 0(t1)                   // t2 <- function entry of specific syscall  // 得到sys_*函数的入口地址
 
 
-    // 将参数从Trap Frame(user stack)取出来
+    // 将参数从Trap Frame(user stack)取出来(sp 是内核栈指针，t0是用户栈指针)
     lw      t0, TF_REG29(sp)            // t0 <- user's stack pointer
     lw      t3, 16(t0)                  // t3 <- the 5th argument of msyscall
     lw      t4, 20(t0)                  // t4 <- the 6th argument of msyscall
@@ -46,7 +46,7 @@ IS_BD:
     lw      a2, TF_REG6(sp)
     lw      a3, TF_REG7(sp)
     addiu   sp, sp, -24                 // 申请空间时减sp指针
-    sw      t3, 16(sp)
+    sw      t3, 16(sp)                  // 把第5、6位参数存在内核栈中的相应位置
     sw      t4, 20(sp)
     
     // 调用sys_*函数
@@ -79,4 +79,3 @@ sys_call_table:                         // Syscall Table
     .word sys_ipc_can_send
     .word sys_ipc_recv
     .word sys_cgetc
-

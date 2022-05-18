@@ -61,15 +61,15 @@
  o      KERNBASE -----> +----------------------------+----|-------0x8001 0000    | 
  o                      |   Interrupts & Exception   |   \|/                    \|/
  o      ULIM     -----> +----------------------------+------------0x8000 0000-------    
- o                      |         User VPT           |     PDMAP                /|\ 
+ o                      |         User VPT           |     PDMAP                /|\      // 自映射页表
  o      UVPT     -----> +----------------------------+------------0x7fc0 0000    |
- o                      |         PAGES              |     PDMAP                 |
+ o                      |         PAGES              |     PDMAP                 |       // 保存16k个Page结构体
  o      UPAGES   -----> +----------------------------+------------0x7f80 0000    |
- o                      |         ENVS               |     PDMAP                 |
+ o                      |         ENVS               |     PDMAP                 |       // 保存1k个Env结构体
  o  UTOP,UENVS   -----> +----------------------------+------------0x7f40 0000    |
- o  UXSTACKTOP -/       |     user exception stack   |     BY2PG                 |
+ o  UXSTACKTOP -/       |     user exception stack   |     BY2PG                 |       // 异常栈
  o                      +----------------------------+------------0x7f3f f000    |
- o                      |       Invalid memory       |     BY2PG                 |
+ o                      |       Invalid memory       |     BY2PG                 |       // 无效内存
  o      USTACKTOP ----> +----------------------------+------------0x7f3f e000    |
  o                      |     normal user stack      |     BY2PG                 |
  o                      +----------------------------+------------0x7f3f d000    |
@@ -175,5 +175,6 @@ extern volatile Pde* vpd[];  // page entry 页目录项指针数组，记录页�
 extern void tlb_out(u_int entryhi);
 #endif //!__ASSEMBLER__
 #endif // !_MMU_H_
+
 
 

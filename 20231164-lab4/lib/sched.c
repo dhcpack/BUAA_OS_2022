@@ -60,6 +60,3 @@ void sched_yield(void)
 //	printf("count is %d\n", count);
     env_run(e);
 }
-
-
-
