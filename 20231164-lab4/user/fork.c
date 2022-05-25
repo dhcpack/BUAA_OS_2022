@@ -182,8 +182,7 @@ fork(void)
 
     // writef("newenvid get: newenvid = %d\n", newenvid);
     if(newenvid == 0) { // 子进程
-        // envid2env(syscall_getenvid(), &env, 0);  // ?? 这里因为不知名原因找不到envid2env函数
-        env = envs + ENVX(syscall_getenvid());
+        env = envs + ENVX(syscall_getenvid());  // 用户态envid2env不可用
         return 0;
     }
 
