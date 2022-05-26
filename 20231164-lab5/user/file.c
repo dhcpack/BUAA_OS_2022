@@ -1,5 +1,6 @@
 #include "lib.h"
 #include <fs.h>
+// 用户进程的文件接口
 
 #define debug 0
 

@@ -1,6 +1,7 @@
 /*
  * File system server main loop -
  * serves IPC requests from other environments.
+ * 与磁盘镜像交互进程，并实现IPC通信与用户进程做交互
  */
 
 #include "fs.h"

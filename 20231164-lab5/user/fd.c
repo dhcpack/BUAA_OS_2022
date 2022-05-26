@@ -2,6 +2,7 @@
 #include "fd.h"
 #include <mmu.h>
 #include <env.h>
+// 文件描述符
 
 
 static struct Dev *devtab[] = {

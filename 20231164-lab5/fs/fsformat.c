@@ -1,5 +1,6 @@
 /*
  * BUAA MIPS OS Kernel file system format
+ * 创建磁盘镜像
  */
 
 #include <stdio.h>
@@ -42,6 +43,7 @@ struct Block {
 } disk[NBLOCK];
 
 // reverse: mutually transform between little endian and big endian.
+// 大端小端存储模式之间的转化
 void reverse(uint32_t *p) {
     uint8_t *x = (uint8_t *) p;
     uint32_t y = *(uint32_t *) x;
@@ -52,6 +54,7 @@ void reverse(uint32_t *p) {
 }
 
 // reverse_block: reverse proper filed in a block.
+// 翻转块中的文件。
 void reverse_block(struct Block *b) {
     int i, j;
     struct Super *s;
@@ -103,6 +106,7 @@ void reverse_block(struct Block *b) {
 }
 
 // Initial the disk. Do some work with bitmap and super block.
+// 初始化磁盘、位图、超块，将所有的块标记为空闲块
 void init_disk() {
     int i, r, diff;
 
@@ -118,11 +122,11 @@ void init_disk() {
         disk[2+i].type = BLOCK_BMAP;
     }
     for(i = 0; i < nbitblock; ++i) {
-        memset(disk[2+i].data, 0xff, BY2BLK);
+        memset(disk[2+i].data, 0xff, BY2BLK);  // 使用memset将位图中的每一个字节 (Byte)都设成0xff，表示这一块磁盘处于空闲状态。
     }
     if(NBLOCK != nbitblock * BIT2BLK) {
         diff = NBLOCK % BIT2BLK / 8;
-        memset(disk[2+(nbitblock-1)].data+diff, 0x00, BY2BLK - diff);
+        memset(disk[2+(nbitblock-1)].data+diff, 0x00, BY2BLK - diff);  // 根据实际情况，将位图不存在的部分设为0。
     }
 
     // Step 3: Initialize super block.
@@ -134,12 +138,14 @@ void init_disk() {
 }
 
 // Get next block id, and set `type` to the block's type.
+// 得到下一个磁盘块号，并将它的type设置为type
 int next_block(int type) {
     disk[nextbno].type = type;
     return nextbno++;
 }
 
 // Flush disk block usage to bitmap.
+// 将磁盘使用情况更新到位图中
 void flush_bitmap() {
     int i;
     // update bitmap, mark all bit where corresponding block is used.
@@ -149,6 +155,7 @@ void flush_bitmap() {
 }
 
 // Finish all work, dump block array into physical file.
+// 将磁盘内容写到物理文件中
 void finish_fs(char *name) {
     int fd, i, k, n, r;
     uint32_t *p;
@@ -168,19 +175,19 @@ void finish_fs(char *name) {
 }
 
 // Save block link.
+// 保存磁盘块之间的链接  保存指向存储文件内容的磁盘块的指针(f: 文件控制块，nblk: 第nblk个文件指针，bno: 第bno个磁盘块)
 void save_block_link(struct File *f, int nblk, int bno)
 {
     assert(nblk < NINDIRECT); // if not, file is too large !
 
-    if(nblk < NDIRECT) {
+    if(nblk < NDIRECT) {   // 文件指针的序号小于10，将硬盘块号存储到直接指针处
         f->f_direct[nblk] = bno;
-    }
-    else {
+    } else {
         if(f->f_indirect == 0) {
             // create new indirect block.
-            f->f_indirect = next_block(BLOCK_INDEX);
+            f->f_indirect = next_block(BLOCK_INDEX);  // 为f->f_indirect申请一个间接磁盘块
         }
-        ((uint32_t *)(disk[f->f_indirect].data))[nblk] = bno;
+        ((uint32_t *)(disk[f->f_indirect].data))[nblk] = bno;  // 文件指针的序号大于等于10，将硬盘块号存储到间接磁盘块的相应位置
     }
 }
 

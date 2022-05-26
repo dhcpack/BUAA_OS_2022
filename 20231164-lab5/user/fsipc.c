@@ -1,6 +1,7 @@
 #include "lib.h"
 #include <fs.h>
 #include <env.h>
+// 文件通信函数
 
 #define debug 0
 
