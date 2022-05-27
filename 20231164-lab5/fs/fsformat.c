@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 
 /* Prevent inc/types.h, included from inc/fs.h,
  * From attempting to redefine types defined in the host's inttypes.h. */
@@ -22,7 +23,7 @@ typedef struct Super Super;
 typedef struct File File;
 
 #define NBLOCK 1024 // The number of blocks in the disk.
-uint32_t nbitblock; // the number of bitmap blocks.
+uint32_t nbitblock; // the number of bitmap blocks. 位图磁盘块的数量
 uint32_t nextbno;   // next availiable block.
 
 struct Super super; // super block.
@@ -37,10 +38,10 @@ enum {
     BLOCK_INDEX = 6,
 };
 
-struct Block {
-    uint8_t data[BY2BLK];
+struct Block {  // 磁盘块，是操作系统与磁盘交互的最小单位
+    uint8_t data[BY2BLK];  // 磁盘块大小4096B
     uint32_t type;
-} disk[NBLOCK];
+} disk[NBLOCK];  // 文件系统中磁盘块的数量1024个
 
 // reverse: mutually transform between little endian and big endian.
 // 大端小端存储模式之间的转化
@@ -114,7 +115,7 @@ void init_disk() {
     disk[0].type = BLOCK_BOOT;
 
     // Step 2: Initialize boundary.
-    nbitblock = (NBLOCK + BIT2BLK - 1) / BIT2BLK;
+    nbitblock = (NBLOCK + BIT2BLK - 1) / BIT2BLK;  // nbitblock 表示记录整个磁盘上所有块的使用信息，需要多少个磁盘块来存储位图。 
     nextbno = 2 + nbitblock;
 
     // Step 2: Initialize bitmap blocks.
@@ -176,6 +177,7 @@ void finish_fs(char *name) {
 
 // Save block link.
 // 保存磁盘块之间的链接  保存指向存储文件内容的磁盘块的指针(f: 文件控制块，nblk: 第nblk个文件指针，bno: 第bno个磁盘块)
+// 将文件控制块的第nblk个指针指向第bno个磁盘块
 void save_block_link(struct File *f, int nblk, int bno)
 {
     assert(nblk < NINDIRECT); // if not, file is too large !
@@ -192,6 +194,7 @@ void save_block_link(struct File *f, int nblk, int bno)
 }
 
 // Make new block contians link to files in a directory.
+// 申请一个磁盘块，再调用上一个函数(save_block_link)将文件控制块的第nblk个指针指向这个磁盘块
 int make_link_block(struct File *dirf, int nblk) {
     int bno = next_block(BLOCK_FILE);
     save_block_link(dirf, nblk, bno);
@@ -201,7 +204,7 @@ int make_link_block(struct File *dirf, int nblk) {
 
 // Overview:
 //      Create new block pointer for a file under sepcified directory.
-//      Notice that when we delete a file, we do not re-arrenge all
+//      Notice that when we delete a f/////ile, we do not re-arrenge all
 //      other file pointers, so we should be careful of existing empty
 //      file pointers
 //
@@ -217,15 +220,28 @@ struct File *create_file(struct File *dirf) {
     struct File *dirblk;
     int i, bno, found;
     int nblk = dirf->f_size / BY2BLK;
+    int j;
 
     // Your code here
     // Step1: According to different range of nblk, make classified discussion to
     //        calculate the correct block number.
+    for (i = 0; i < nblk;i++){
+        if(i<NDIRECT){
+            bno = dirf->f_direct[i];
+        }else {
+            bno = ((int *)(disk[dirf->f_indirect].data))[i];
+        }
+        dirblk = (struct File *)(disk[bno].data);
+        for (j = 0; j < FILE2BLK; j++) {
+            if (dirblk[j].f_name[0] == '\0'){
+                return dirblk + j;
+            }
+        }
+    }
 
-
-    // Step2: Find an unused pointer
-
-
+    // Step2: Find an unused pointer  // step1没找到就申请个新的？？
+    bno = make_link_block(dirf, nblk);
+    return (struct File *)(disk[bno].data);
 }
 
 // Write file to disk under specified dir.
@@ -265,8 +281,55 @@ void write_file(struct File *dirf, const char *path) {
 //
 // Post-Condition:
 //      We ASSUME that this funcion will never fail
-void write_directory(struct File *dirf, char *name) {
+void write_directory(struct File *dirf, char *name)
+{
     // Your code here
+    DIR *dir;
+    struct dirent *info;
+    struct File *ndir, *pdir;
+    int dirlen;
+    char sub[512];
+    if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+        return;
+    dir = opendir(name);
+    if (dir == NULL)
+        return;
+    dirlen = strlen(name);
+    if (name[dirlen - 1] == '/')
+        name[dirlen - 1] = 0;
+    pdir = create_file(dirf);
+    char *p, *q;
+    p = q = name;
+    while (*p)
+    {
+        if (*p == '/')
+        {
+            q = ++p;
+        }
+        else
+        {
+            p++;
+        }
+    }
+    strcpy(pdir->f_name, q);
+    pdir->f_type = FTYPE_DIR;
+    while ((info = readdir(dir)) != NULL)
+    {
+        if (info->d_type == DT_DIR)
+        {
+            if (strcmp(info->d_name, ".") != 0 && strcmp(info->d_name, "..") != 0)
+            {
+                sprintf(sub, "%s/%s", name, info->d_name);
+                write_directory(pdir, sub);
+            }
+        }
+        else
+        {
+            sprintf(sub, "%s/%s", name, info->d_name);
+            write_file(pdir, sub);
+        }
+    }
+    closedir(dir);
 }
 
 int main(int argc, char **argv) {
@@ -297,3 +360,4 @@ Usage: fsformat gxemul/fs.img files...\n\
 
     return 0;
 }
+

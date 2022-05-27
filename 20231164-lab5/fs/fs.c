@@ -16,15 +16,21 @@ int block_is_free(u_int);
 // Overview:
 //	Return the virtual address of this disk block. If the `blockno` is greater
 //	than disk's nblocks, panic.
+// 计算指定磁盘块blockno对应的虚存地址
 /*** exercise 5.5 ***/
 u_int
 diskaddr(u_int blockno)
 {
+	if (super && blockno >= super->s_nblocks) {  // 似乎等于也不行？
+		user_panic("non-existent block %08x\n", blockno);
+	}
 
+	return DISKMAP + blockno * BY2BLK;
 }
 
 // Overview:
 //	Check if this virtual address is mapped to a block. (check PTE_V bit)
+// 检查是否虚拟地址va是否映射到一个磁盘块上
 u_int
 va_is_mapped(u_int va)
 {
@@ -33,6 +39,7 @@ va_is_mapped(u_int va)
 
 // Overview:
 //	Check if this disk block is mapped to a vitrual memory address. (check corresponding `va`)
+// 检查磁盘块是否映射到一个虚拟地址
 u_int
 block_is_mapped(u_int blockno)
 {
@@ -45,6 +52,7 @@ block_is_mapped(u_int blockno)
 
 // Overview:
 //	Check if this virtual address is dirty. (check PTE_D bit)
+// 检查va是否可写
 u_int
 va_is_dirty(u_int va)
 {
@@ -53,6 +61,7 @@ va_is_dirty(u_int va)
 
 // Overview:
 //	Check if this block is dirty. (check corresponding `va`)
+// 检查block是否可写
 u_int
 block_is_dirty(u_int blockno)
 {
@@ -67,30 +76,47 @@ block_is_dirty(u_int blockno)
 //	If this block is already mapped to a virtual address(use `block_is_mapped`),
 // 	then return 0, indicate success, else alloc a page for this `va` address,
 //	and return the result(success or fail) of `syscall_mem_alloc`.
+// 检查指定的磁盘块是否已经映射到内存，如果没有，分配一页内存来保存磁盘上的数据。
 /*** exercise 5.6 ***/
 int
 map_block(u_int blockno)
 {
 	// Step 1: Decide whether this block has already mapped to a page of physical memory.
+	if(block_is_mapped(blockno)){
+		return 0;
+	}
 
 	// Step 2: Alloc a page of memory for this block via syscall.
+	return syscall_mem_alloc(0, diskaddr(blockno), PTE_V | PTE_R);
 }
 
 // Overview:
 //	Unmap a block.
+// 解除磁盘块和物理内存之间的映射关系，回收内存。
 /*** exercise 5.6 ***/
 void
 unmap_block(u_int blockno)
 {
 	int r;
+	u_int va = block_is_mapped(blockno);
 
 	// Step 1: check if this block is mapped.
+	if(va == 0){
+		return;
+	}
 
 	// Step 2: use block_is_free，block_is_dirty to check block,
 	// if this block is used(not free) and dirty, it needs to be synced to disk: write_block
 	// can't be unmap directly.
+	if((!block_is_free(blockno)) && (block_is_dirty(blockno))){
+		write_block(blockno);
+	}
 
 	// Step 3: use 'syscall_mem_unmap' to unmap corresponding virtual memory.
+	if((r = syscall_mem_unmap(0, va)) != 0){
+		writef("unmap_block failed\n");
+		return;
+	}
 
 	// Step 4: validate result of this unmap operation.
 	user_assert(!block_is_mapped(blockno));
@@ -111,6 +137,7 @@ unmap_block(u_int blockno)
 //
 // Hint:
 //	use diskaddr, block_is_mapped, syscall_mem_alloc, and ide_read.
+// 将指定编号的磁盘块读入到内存中，*blk保存磁盘块在内存中的地址，*isnew保存磁盘块是否是新申请的
 int
 read_block(u_int blockno, void **blk, u_int *isnew)
 {
@@ -126,12 +153,12 @@ read_block(u_int blockno, void **blk, u_int *isnew)
 	//	If the bitmap is NULL, indicate that we haven't read bitmap from disk to memory
 	// 	until now. So, before we check if a block is free using `block_is_free`, we must
 	// 	ensure that the bitmap blocks are already read from the disk to memory.
-	if (bitmap && block_is_free(blockno)) {
+	if (bitmap && block_is_free(blockno)) {  // 如果磁盘块是free，报panic
 		user_panic("reading free block %08x\n", blockno);
 	}
 
 	// Step 3: transform block number to corresponding virtual address.
-	va = diskaddr(blockno);
+	va = diskaddr(blockno);  // 得到第blockno块磁盘的对应的虚拟地址
 
 	// Step 4: read disk and set *isnew.
 	// Hint: 
@@ -146,9 +173,9 @@ read_block(u_int blockno, void **blk, u_int *isnew)
 		if (isnew) {
 			*isnew = 1;
 		}
-		syscall_mem_alloc(0, va, PTE_V | PTE_R);
-		ide_read(0, blockno * SECT2BLK, (void *)va, SECT2BLK);
-	}
+		syscall_mem_alloc(0, va, PTE_V | PTE_R);  // 在va处申请一个物理页面
+		ide_read(0, blockno * SECT2BLK, (void *)va, SECT2BLK);  // 将整个IDE磁盘中的内容读取到内存中
+	}  // 0是磁盘号，blockno * SECT2BLK是该磁盘块的起始扇区号，va是将读取信息保存到的地址，SECT2BLK是一个磁盘块中扇区数量
 
 	// Step 5: if blk != NULL, set `va` to *blk.
 	if (blk) {
@@ -171,9 +198,9 @@ write_block(u_int blockno)
 
 	// Step2: write data to IDE disk. (using ide_write, and the diskno is 0)
 	va = diskaddr(blockno);
-	ide_write(0, blockno * SECT2BLK, (void *)va, SECT2BLK);
+	ide_write(0, blockno * SECT2BLK, (void *)va, SECT2BLK);  // 向磁盘中写入数据
 
-	syscall_mem_map(0, va, 0, va, (PTE_V | PTE_R | PTE_LIBRARY));
+	syscall_mem_map(0, va, 0, va, (PTE_V | PTE_R | PTE_LIBRARY));  // 更改perm？
 }
 
 // Overview:
@@ -181,6 +208,7 @@ write_block(u_int blockno)
 //
 // Post-Condition:
 //	Return 1 if the block is free, else 0.
+// 磁盘块是否空闲
 int
 block_is_free(u_int blockno)
 {
@@ -197,6 +225,7 @@ block_is_free(u_int blockno)
 
 // Overview:
 //	Mark a block as free in the bitmap.
+// 在位图中标记磁盘处于空闲状态
 /*** exercise 5.3 ***/
 void
 free_block(u_int blockno)
@@ -216,6 +245,7 @@ free_block(u_int blockno)
 // Post-Condition:
 //	Return block number allocated on success,
 //		   -E_NO_DISK if we are out of blocks.
+// 寻找一个空闲磁盘块，并写入？
 int
 alloc_block_num(void)
 {
@@ -225,7 +255,7 @@ alloc_block_num(void)
 	for (blockno = 3; blockno < super->s_nblocks; blockno++) {
 		if (bitmap[blockno / 32] & (1 << (blockno % 32))) {	// the block is free
 			bitmap[blockno / 32] &= ~(1 << (blockno % 32));
-			write_block(blockno / BIT2BLK + 2); // write to disk.
+			write_block(blockno / BIT2BLK + 2); // write to disk. ？
 			return blockno;
 		}
 	}
@@ -235,6 +265,7 @@ alloc_block_num(void)
 
 // Overview:
 //	Allocate a block -- first find a free block in the bitmap, then map it into memory.
+// 申请一个空闲块，并映射到内存中
 int
 alloc_block(void)
 {
@@ -260,6 +291,7 @@ alloc_block(void)
 //
 // Post-condition:
 //	If error occurred during read super block or validate failed, panic.
+// 读取超块信息
 void
 read_super(void)
 {
@@ -293,6 +325,7 @@ read_super(void)
 // 	Read all the bitmap blocks into memory.
 // 	Set the "bitmap" pointer to point ablocknot the beginning of the first bitmap block.
 //	For each block i, user_assert(!block_is_free(i))).Check that they're all marked as inuse
+// 读取位图信息
 void
 read_bitmap(void)
 {
@@ -380,6 +413,7 @@ fs_init(void)
 //		-E_NO_DISK if there's no space on the disk for an indirect block.
 //		-E_NO_MEM if there's no space in memory for an indirect block.
 //		-E_INVAL if filebno is out of range (it's >= NINDIRECT).
+// 找到文件f中第filebno个磁盘块指针，并将*ppdiskbno指针设为磁盘块指针
 int
 file_block_walk(struct File *f, u_int filebno, u_int **ppdiskbno, u_int alloc)
 {
@@ -387,35 +421,35 @@ file_block_walk(struct File *f, u_int filebno, u_int **ppdiskbno, u_int alloc)
 	u_int *ptr;
 	void *blk;
 
-	if (filebno < NDIRECT) {
+	if (filebno < NDIRECT) {  // 小于直接指针数目，则直接返回
 		// Step 1: if the target block is corresponded to a direct pointer, just return the
 		// 	disk block number.
 		ptr = &f->f_direct[filebno];
-	} else if (filebno < NINDIRECT) {
+	} else if (filebno < NINDIRECT) {  // 大于等于直接指针数目小于最大指针数目
 		// Step 2: if the target block is corresponded to the indirect block, but there's no
 		//	indirect block and `alloc` is set, create the indirect block.
-		if (f->f_indirect == 0) {
-			if (alloc == 0) {
+		if (f->f_indirect == 0) {  // 如果还没有间接指针的磁盘块
+			if (alloc == 0) {  // 不申请则返回异常码
 				return -E_NOT_FOUND;
 			}
 
-			if ((r = alloc_block()) < 0) {
+			if ((r = alloc_block()) < 0) {  // 申请间接指针的磁盘块
 				return r;
 			}
 			f->f_indirect = r;
 		}
 
 		// Step 3: read the new indirect block to memory.
-		if ((r = read_block(f->f_indirect, &blk, 0)) < 0) {
+		if ((r = read_block(f->f_indirect, &blk, 0)) < 0) {  // 将间接指针所在的磁盘块读取到内存中，blk保存磁盘块在内存中的地址
 			return r;
 		}
-		ptr = (u_int *)blk + filebno;
+		ptr = (u_int *)blk + filebno;  // 在内存中得到间接指针
 	} else {
 		return -E_INVAL;
 	}
 
 	// Step 4: store the result into *ppdiskbno, and return 0.
-	*ppdiskbno = ptr;
+	*ppdiskbno = ptr;  // *ppdiskbno指针设为磁盘块指针(为了得到多个返回值)
 	return 0;
 }
 
@@ -430,6 +464,7 @@ file_block_walk(struct File *f, u_int filebno, u_int **ppdiskbno, u_int alloc)
 //		-E_NO_DISK: if a block needed to be allocated but the disk is full.
 //		-E_NO_MEM: if we're out of memory.
 //		-E_INVAL: if filebno is out of range.
+// 和上一个函数意义相同？ 找到文件f中第filebno个磁盘块指针，并将其保存在diskbno中
 int
 file_map_block(struct File *f, u_int filebno, u_int *diskbno, u_int alloc)
 {
@@ -437,29 +472,30 @@ file_map_block(struct File *f, u_int filebno, u_int *diskbno, u_int alloc)
 	u_int *ptr;
 
 	// Step 1: find the pointer for the target block.
-	if ((r = file_block_walk(f, filebno, &ptr, alloc)) < 0) {
+	if ((r = file_block_walk(f, filebno, &ptr, alloc)) < 0) {  // 找到磁盘块指针
 		return r;
 	}
 
 	// Step 2: if the block not exists, and create is set, alloc one.
-	if (*ptr == 0) {
-		if (alloc == 0) {
-			return -E_NOT_FOUND;
+	if (*ptr == 0) {  // 如果磁盘块不存在
+		if (alloc == 0) {  // 如果不申请
+			return -E_NOT_FOUND;  // 返回异常码
 		}
 
-		if ((r = alloc_block()) < 0) {
+		if ((r = alloc_block()) < 0) {  // 申请一个磁盘块
 			return r;
 		}
 		*ptr = r;
 	}
 
 	// Step 3: set the pointer to the block in *diskbno and return 0.
-	*diskbno = *ptr;
+	*diskbno = *ptr;  // 将磁盘块指针保存到diskno中
 	return 0;
 }
 
 // Overview:
 //	Remove a block from file f.  If it's not there, just silently succeed.
+// 清除文件的第filebno个文件指针
 int
 file_clear_block(struct File *f, u_int filebno)
 {
@@ -485,6 +521,7 @@ file_clear_block(struct File *f, u_int filebno)
 //
 // Post-Condition:
 //	return 0 on success, and read the data to `blk`, return <0 on error.
+// 读取文件的第filebno个磁盘块的信息，并将其保存在内存中(地址为*blk)
 int
 file_get_block(struct File *f, u_int filebno, void **blk)
 {
@@ -506,6 +543,7 @@ file_get_block(struct File *f, u_int filebno, void **blk)
 
 // Overview:
 //	Mark the offset/BY2BLK'th block dirty in file f by writing its first word to itself.
+// 将文件中偏移大小为offset的块标记为dirty(通过向自己写入自己的第一个字节)
 int
 file_dirty(struct File *f, u_int offset)
 {
@@ -526,6 +564,7 @@ file_dirty(struct File *f, u_int offset)
 // Post-Condition:
 //	return 0 on success, and set the pointer to the target file in `*file`.
 //		< 0 on error.
+// 查找某个目录下是否存在指定的文件。（提示：使用file_get_block可以将某个指定文件指向的磁盘块读入内存）。
 /*** exercise 5.7 ***/
 int
 dir_lookup(struct File *dir, char *name, struct File **file)
@@ -536,18 +575,27 @@ dir_lookup(struct File *dir, char *name, struct File **file)
 	struct File *f;
 
 	// Step 1: Calculate nblock: how many blocks are there in this dir？
+	nblock = dir->f_size / BY2BLK;
 
 	for (i = 0; i < nblock; i++) {
 		// Step 2: Read the i'th block of the dir.
 		// Hint: Use file_get_block.
-
+		if ((r = file_get_block(dir, i, &blk)) < 0) {  // 读取磁盘块的信息，并将其保存在内存中
+			return r;
+		}
+		f = (struct File *)blk;
 
 		// Step 3: Find target file by file name in all files on this block.
 		// If we find the target file, set the result to *file and set f_dir field.
-
+		for (j = 0; j < FILE2BLK; j++) {  // 遍历磁盘块下的文件结构体
+			if (strcmp(f[j].f_name, name) == 0) {  // 如果文件名相同
+				f[j].f_dir = dir;
+				*file = &f[j]; // 将文件指针指向该结构体
+				return 0;  // 返回0
+			}
+		}
 	}
-
-	return -E_NOT_FOUND;
+	return -E_NOT_FOUND;  // 未找到文件
 }
 
 
@@ -562,19 +610,19 @@ dir_alloc_file(struct File *dir, struct File **file)
 	void *blk;
 	struct File *f;
 
-	nblock = dir->f_size / BY2BLK;
+	nblock = dir->f_size / BY2BLK;  // 目录文件的块数
 
-	for (i = 0; i < nblock; i++) {
+	for (i = 0; i < nblock; i++) {  // 依次读取在目录文件下的磁盘块
 		// read the block.
-		if ((r = file_get_block(dir, i, &blk)) < 0) {
+		if ((r = file_get_block(dir, i, &blk)) < 0) {  // 读取磁盘块的信息，并将其保存在内存中
 			return r;
 		}
 
 		f = blk;
 
-		for (j = 0; j < FILE2BLK; j++) {
+		for (j = 0; j < FILE2BLK; j++) {  // 遍历磁盘块下的文件结构体
 			if (f[j].f_name[0] == '\0') { // found free File structure.
-				*file = &f[j];
+				*file = &f[j];  // 将文件指针指向该结构体，返回
 				return 0;
 			}
 		}
@@ -582,7 +630,7 @@ dir_alloc_file(struct File *dir, struct File **file)
 
 	// no free File structure in exists data block.
 	// new data block need to be created.
-	dir->f_size += BY2BLK;
+	dir->f_size += BY2BLK;  // 没有空闲结构体，申请一个新的
 	if ((r = file_get_block(dir, i, &blk)) < 0) {
 		return r;
 	}
@@ -857,4 +905,5 @@ file_remove(char *path)
 
 	return 0;
 }
+
 

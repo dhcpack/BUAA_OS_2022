@@ -5,8 +5,8 @@
 /* IDE disk number to look on for our file system */
 #define DISKNO		1
 
-#define BY2SECT		512	/* Bytes per disk sector */
-#define SECT2BLK	(BY2BLK/BY2SECT)	/* sectors to a block */
+#define BY2SECT		512  // 扇区大小	/* Bytes per disk sector */
+#define SECT2BLK	(BY2BLK/BY2SECT)  // 一个磁盘块的扇区数量	/* sectors to a block */
 
 /* Disk block n, when in memory, is mapped into the file system
  * server's address space at DISKMAP+(n*BY2BLK). */
@@ -36,3 +36,4 @@ int alloc_block(void);
 
 /* test.c */
 void fs_test(void);
+

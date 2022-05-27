@@ -9,7 +9,7 @@
 // File nodes (both in-memory and on-disk)
 
 // Bytes per file system block - same as page size
-#define BY2BLK		BY2PG
+#define BY2BLK		BY2PG       // 磁盘块大小
 #define BIT2BLK		(BY2BLK*8)
 
 // Maximum size of a filename (a single path component), including null
@@ -19,8 +19,8 @@
 #define MAXPATHLEN	1024
 
 // Number of (direct) block pointers in a File descriptor
-#define NDIRECT		10
-#define NINDIRECT	(BY2BLK/4)
+#define NDIRECT		10          // 文件的直接指针的数量
+#define NINDIRECT	(BY2BLK/4)  // 用一个block存储间接指针，一个block size = BY2BLK，一个指针4B
 
 #define MAXFILESIZE	(NINDIRECT*BY2BLK)
 
@@ -34,10 +34,10 @@ struct File {  // 文件控制块
 	u_int f_indirect;           // 间接指针(它指向一个磁盘块，为了简化计算，我们不使用间接磁盘块的前十个指针。)
 
 	struct File *f_dir;		    // 指向文件所属的文件目录 the pointer to the dir where this file is in, valid only in memory.
-	u_char f_pad[BY2FILE - MAXNAMELEN - 4 - 4 - NDIRECT * 4 - 4 - 4];   // 让整数个文件结构占据一个磁盘块，填充剩下的字节
+	u_char f_pad[BY2FILE - MAXNAMELEN - 4 - 4 - NDIRECT * 4 - 4 - 4];   // 让整数个文件结构占据256字节，填充剩下的字节
 };
 
-#define FILE2BLK	(BY2BLK/sizeof(struct File))
+#define FILE2BLK	(BY2BLK/sizeof(struct File))  // 一个磁盘块中能存储的文件结构体数量
 
 // File types  文件类型
 #define FTYPE_REG		0	// Regular file
@@ -48,7 +48,7 @@ struct File {  // 文件控制块
 
 #define FS_MAGIC	0x68286097	// Everyone's favorite OS class
 
-struct Super {  // 超级块
+struct Super {  // 超级块，用来描述文件系统的基本信息
 	u_int s_magic;		// Magic number: FS_MAGIC          魔数，识别该文件系统，是一个常量
 	u_int s_nblocks;	// Total number of blocks on disk  记录本文件系统有多少个磁盘块，本文件系统为1024。
 	struct File s_root;	// Root directory node             根目录，其f_type为FTYPE_DIR，f_name为”/”。
@@ -93,3 +93,4 @@ struct Fsreq_remove {
 };
 
 #endif // _FS_H_
+

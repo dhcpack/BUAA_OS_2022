@@ -42,4 +42,16 @@ clean:
 		done; \
 	rm -rf *.o *~ $(vmlinux_elf) gxemul/*.img
 
+push:
+	git add .
+	git commit -m "make push"
+	git push
+
+elf:
+	/OSLAB/gxemul -E testmips -C R3000 -M 64 -d gxemul/fs.img ./gxemul/vmlinux
+
+debug:
+	/OSLAB/gxemul -E testmips -C R3000 -M 64 -d gxemul/fs.img ./gxemul/vmlinux -V
+
 include include.mk
+
