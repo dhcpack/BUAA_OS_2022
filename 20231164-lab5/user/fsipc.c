@@ -1,6 +1,7 @@
 #include "lib.h"
 #include <fs.h>
 #include <env.h>
+// 文件通信函数
 
 #define debug 0
 
@@ -129,12 +130,19 @@ int
 fsipc_remove(const char *path)
 {
 	// Step 1: Check the length of path, decide if the path is valid.
+	if (path[0] == '\0' || strlen(path) >= MAXPATHLEN) {
+		return -E_BAD_PATH;
+	}
 
 	// Step 2: Transform fsipcbuf to struct Fsreq_remove*
+	struct Fsreq_remove *req;
+	req = (struct Fsreq_open *)fsipcbuf;
 
 	// Step 3: Copy path to path in req.
+	strcpy((char *)req->req_path, path);
 
 	// Step 4: Send request to fs server with IPC.
+	return fsipc(FSREQ_REMOVE, req, 0, 0);
 }
 
 // Overview:
@@ -145,4 +153,3 @@ fsipc_sync(void)
 {
 	return fsipc(FSREQ_SYNC, fsipcbuf, 0, 0);
 }
-

@@ -1,5 +1,6 @@
 #include "lib.h"
 #include <fs.h>
+// 用户进程的文件接口
 
 #define debug 0
 
@@ -15,8 +16,8 @@ struct Dev devfile = {
 	.dev_id =	'f',
 	.dev_name =	"file",
 	.dev_read =	file_read,
-	.dev_write =	file_write,
-	.dev_close =	file_close,
+	.dev_write = file_write,
+	.dev_close = file_close,
 	.dev_stat =	file_stat,
 };
 
@@ -40,22 +41,35 @@ open(const char *path, int mode)
 
 	// Step 1: Alloc a new Fd, return error code when fail to alloc.
 	// Hint: Please use fd_alloc.
-
+	if((r = fd_alloc(&fd)) != 0){
+		return r;
+	}
 
 	// Step 2: Get the file descriptor of the file to open.
 	// Hint: Read fsipc.c, and choose a function.
+	if((r = fsipc_open(path, mode, fd)) != 0) {
+		return r;
+	}
 
-
+	ffd = (struct Filefd *)fd;
 	// Step 3: Set the start address storing the file's content. Set size and fileid correctly.
 	// Hint: Use fd2data to get the start address.
-
+	va = fd2data(fd);
+	size = ffd->f_file.f_size;  // map时候判断大小用到了
+	fileid = ffd->f_fileid;     // 和文件通信读取信息时候用到了
 
 	// Step 4: Alloc memory, map the file content into memory.
-
+	for (i = 0; i < size;i += BY2PG){
+		if((r = syscall_mem_alloc(0, va+i, PTE_V|PTE_R)) != 0){
+			return r;
+		}
+		if((r = fsipc_map(fileid, i, va + i)) != 0){
+			return r;
+		}
+	}
 
 	// Step 5: Return the number of file descriptor.
-
-
+	return fd2num(fd);
 }
 
 // Overview:
@@ -258,7 +272,7 @@ remove(const char *path)
 {
 	// Your code here.
 	// Call fsipc_remove.
-
+	return fsipc_remove(path);
 }
 
 // Overview:

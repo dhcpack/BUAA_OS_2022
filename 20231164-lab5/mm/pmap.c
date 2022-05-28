@@ -143,7 +143,7 @@ void boot_map_segment(Pde *pgdir, u_long va, u_long size, u_long pa, int perm)
         /* Step 1. use `boot_pgdir_walk` to "walk" the page directory */
         pgtable_entry = boot_pgdir_walk(pgdir, va + i, 1);  // 调用boot_pgdir_walk，查找虚拟地址 va + i 对应的二级页表项
         /* Step 2. fill in the page table */
-        *pgtable_entry = (PTE_ADDR(pa))| perm | PTE_V;  // 给二级页表项赋值为物理页号+标志位  PTE_ADDR(pa)得到物理页号，再并上标志位
+        *pgtable_entry = (PTE_ADDR(pa + i))| perm | PTE_V;  // 给二级页表项赋值为物理页号+标志位  PTE_ADDR(pa)得到物理页号，再并上标志位
 	}
 }
 
@@ -472,7 +472,6 @@ void physical_memory_manage_check(void)
 	assert(pp0);
 	assert(pp1 && pp1 != pp0);
 	assert(pp2 && pp2 != pp1 && pp2 != pp0);
-
 
 
 	// temporarily steal the rest of the free pages
