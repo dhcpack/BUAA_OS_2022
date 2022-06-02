@@ -316,3 +316,4 @@ stat(const char *path, struct Stat *stat)
 	close(fd);
 	return r;
 }
+
