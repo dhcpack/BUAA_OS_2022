@@ -36,7 +36,7 @@ ide_read(u_int diskno, u_int secno, void *dst, u_int nsecs)
 	int offset = 0;
 
 	u_int dev_phy_addr = 0x13000000;
-	u_int read_flag = 0;
+	u_char read_flag = 0;
 
 	while (offset_begin + offset < offset_end) {
 		// Your code here
@@ -48,11 +48,11 @@ ide_read(u_int diskno, u_int secno, void *dst, u_int nsecs)
 		if(syscall_write_dev((u_int)&current_offset, dev_phy_addr, 4) != 0){  // 将相对于磁盘起始位置的offset写入到0xB3000000位置，表示在距离磁盘起始处offset的位置开始进行磁盘操作。
 			user_panic("ide_read error\n");
 		}
-		if(syscall_write_dev((u_int)&read_flag, dev_phy_addr + 0x20, 4) != 0){  // 向内存0xB3000020处写入0来开始读磁盘
+		if(syscall_write_dev((u_int)&read_flag, dev_phy_addr + 0x20, 1) != 0){  // 向内存0xB3000020处写入0来开始读磁盘
 			user_panic("ide_read error\n");
 		}
-		u_int success = 0;
-		if(syscall_read_dev((u_int)&success, dev_phy_addr + 0x30, 4) != 0){  // 从0xB3000030处获取写磁盘操作的返回值，通过判断read_sector函数的返回值，就可以知道读取磁盘的操作是否成功。
+		u_char success = 0;
+		if(syscall_read_dev((u_int)&success, dev_phy_addr + 0x30, 1) != 0){  // 从0xB3000030处获取写磁盘操作的返回值，通过判断read_sector函数的返回值，就可以知道读取磁盘的操作是否成功。
 			user_panic("ide_read error\n");
 		}
 		if(!success){
@@ -89,7 +89,7 @@ ide_write(u_int diskno, u_int secno, void *src, u_int nsecs)
 	int offset = 0;
 
 	u_int dev_phy_addr = 0x13000000;
-	u_int write_flag = 1;
+	u_char write_flag = 1;
 
 	// DO NOT DELETE WRITEF !!!
 	writef("diskno: %d\n", diskno);
@@ -107,11 +107,11 @@ ide_write(u_int diskno, u_int secno, void *src, u_int nsecs)
 		if(syscall_write_dev((u_int)(src + offset), dev_phy_addr + 0x4000, 0x200) != 0){  // 先将要写入对应sector的512 bytes的数据放入设备缓冲中
 			user_panic("ide_write error\n");
 		}
-		if(syscall_write_dev((u_int)&write_flag, dev_phy_addr + 0x20, 4) != 0){  // 向内存0xB3000020处写入1来启动写磁盘
+		if(syscall_write_dev((u_int)&write_flag, dev_phy_addr + 0x20, 1) != 0){  // 向内存0xB3000020处写入1来启动写磁盘
 			user_panic("ide_write error\n");
 		}
-		u_int success = 0;
-		if(syscall_read_dev((u_int)&success, dev_phy_addr + 0x30, 4) != 0){  // 从0xB3000030处获取写磁盘操作的返回值，通过判断write_sector函数的返回值，就可以知道读取磁盘的操作是否成功。
+		u_char success = 0;
+		if(syscall_read_dev((u_int)&success, dev_phy_addr + 0x30, 1) != 0){  // 从0xB3000030处获取写磁盘操作的返回值，通过判断write_sector函数的返回值，就可以知道读取磁盘的操作是否成功。
 			user_panic("ide_write error\n");
 		}
 		if(!success){
