@@ -145,11 +145,6 @@ dup(int oldfdnum, int newfdnum)
 	ova = fd2data(oldfd);
 	nva = fd2data(newfd);
 
-	if ((r = syscall_mem_map(0, (u_int)oldfd, 0, (u_int)newfd,
-							 ((*vpt)[VPN(oldfd)]) & (PTE_V | PTE_R | PTE_LIBRARY))) < 0) {
-		goto err;
-	}
-
 	if ((* vpd)[PDX(ova)]) {
 		for (i = 0; i < PDMAP; i += BY2PG) {
 			pte = (* vpt)[VPN(ova + i)];
@@ -164,6 +159,11 @@ dup(int oldfdnum, int newfdnum)
 		}
 	}
 
+	if ((r = syscall_mem_map(0, (u_int)oldfd, 0, (u_int)newfd,
+                             ((*vpt)[VPN(oldfd)]) & (PTE_V | PTE_R | PTE_LIBRARY))) < 0) {
+        goto err;
+    }
+
 	return newfdnum;
 
 err:
@@ -175,6 +175,7 @@ err:
 
 	return r;
 }
+
 
 // Overview:
 //	Read 'n' bytes from 'fd' at the current seek position into 'buf'.
