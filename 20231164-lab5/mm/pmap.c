@@ -200,7 +200,7 @@ void page_init(void)
 	LIST_INIT(&page_free_list);
 
 	/* Step 2: Align `freemem` up to multiple of BY2PG. */
-	ROUND(freemem, BY2PG);
+	freemem = ROUND(freemem, BY2PG);
 
 	/* Step 3: Mark all memory blow `freemem` as used(set `pp_ref`
 	 * filed to 1) */
@@ -474,6 +474,7 @@ void physical_memory_manage_check(void)
 	assert(pp2 && pp2 != pp1 && pp2 != pp0);
 
 
+
 	// temporarily steal the rest of the free pages
 	fl = page_free_list;
 	// now this page_free list must be empty!!!!
@@ -687,8 +688,3 @@ void pageout(int va, int context)
 	page_insert((Pde *)context, p, VA2PFN(va), PTE_R);
 	printf("pageout:\t@@@___0x%x___@@@  ins a page \n", va);
 }
-
-
-
-
-
