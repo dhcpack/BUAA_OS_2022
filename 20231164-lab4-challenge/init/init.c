@@ -5,27 +5,38 @@
 #include <kclock.h>
 #include <trap.h>
 
-void mips_init() {
-	printf("init.c:\tmips_init() is called\n");
-	mips_detect_memory();
+extern char aoutcode[];
+extern char boutcode[];
 
+void mips_init()
+{
+	printf("init.c:\tmips_init() is called\n");
+	printf("env is %d\n",sizeof(struct Env));
+	printf("Tcb is %d\n",sizeof(struct Tcb));
+	printf("Trapframe is %d\n",sizeof(struct Trapframe));
+	mips_detect_memory();
+	
 	mips_vm_init();
 	page_init();
-//	printf("page init success\n");
 	env_init();
-//	printf("env init success\n");
 	
-//	ENV_CREATE(user_tltest);
-//  ENV_CREATE(user_fktest);
-	ENV_CREATE(user_pingpong);
-//	ENV_CREATE(user_f_t);
-//	printf("env create success\n");
-
-	trap_init();
-//	printf("trap init success\n");
+	//ENV_CREATE(user_fktest);
+	//ENV_CREATE(user_pingpong);
+	//ENV_CREATE_PRIORITY(user_a,1);
+	//ENV_CREATE_PRIORITY(user_b,2);
+	//ENV_CREATE(user_helloworld);
+	ENV_CREATE(user_pttest);
+	//ENV_CREATE(user_ptstacktest);
+	//ENV_CREATE(user_ptexittest);
+	//ENV_CREATE(user_ptcanceltest);
+	//ENV_CREATE(user_ptjointest);
+	//ENV_CREATE(user_semtest);
+	// ENV_CREATE(user_seller);
+	
+    trap_init();
 	kclock_init();
-//	printf("kclock init success\n");
 
+	
 	while(1);
 	panic("init.c:\tend of mips_init() reached!");
 }

@@ -21,6 +21,12 @@
 #define E_FILE_EXISTS	11	// File already exists
 #define E_NOT_EXEC	12	// File not a valid executable
 
-#define MAXERROR 12
+// define for lab4-challenge
+#define E_BAD_TCB  13
+#define E_THREAD_MAX     14  // current env has max threads
+#define E_THREAD_NOT_FOUND  15
+
+
+#define MAXERROR 12  // TODO
 
 #endif // _ERROR_H_

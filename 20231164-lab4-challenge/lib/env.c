@@ -11,10 +11,12 @@
 
 struct Env *envs = NULL;        // All environments
 struct Env *curenv = NULL;            // the current env
+struct Tcb *curtcb = NULL;
 
 static struct Env_list env_free_list;    // Free list
 struct Env_list env_sched_list[2];      // Runnable list
- 
+struct Tcb_list tcb_sched_list[2];
+
 extern Pde *boot_pgdir;
 extern char *KERNEL_SP;
 
@@ -102,7 +104,7 @@ int envid2env(u_int envid, struct Env **penv, int checkperm)
 
     e = &envs[ENVX(envid)];  // 根据低十位取env
 
-    if (e->env_status == ENV_FREE || e->env_id != envid) {  // 低十位相等只能说明在envs中存储的地址一样，不能证明e就是我们要找的进程块
+    if (e->env_id != envid) {  // 低十位相等只能说明在envs中存储的地址一样，不能证明e就是我们要找的进程块
         *penv = 0;
         return -E_BAD_ENV;
     }
@@ -142,6 +144,8 @@ env_init(void)
     LIST_INIT(&env_free_list);
     LIST_INIT(&env_sched_list[0]);
     LIST_INIT(&env_sched_list[1]);
+    LIST_INIT(&tcb_sched_list[0]);
+    LIST_INIT(&tcb_sched_list[1]);
 
     /* Step 2: Traverse the elements of 'envs' array,
      *   set their status as free and insert them into the env_free_list.
@@ -151,7 +155,6 @@ env_init(void)
     struct Env *current_env;
 
     for (current_env = &envs[NENV - 1], i = NENV - 1; i >= 0;current_env--, i--) {
-        current_env->env_status = ENV_FREE;
         LIST_INSERT_HEAD(&env_free_list, current_env, env_link);
     }
 }
@@ -245,16 +248,24 @@ env_alloc(struct Env **new, u_int parent_id)
 
     /* Step 2: Call a certain function (has been completed just now) to init kernel memory layout for this new Env.
      *The function mainly maps the kernel address to this new Env address. */
-    env_setup_vm(e);   // 初始化地址空间 申请页目录并赋初值
+    if((r = env_setup_vm(e) != 0)) {  // 初始化地址空间 申请页目录并赋初值
+        return r;
+    };
 
     /* Step 3: Initialize every field of new Env with appropriate values.*/
     e->env_id = mkenvid(e);          // id
-    e->env_status = ENV_RUNNABLE;    // status
     e->env_parent_id = parent_id;    // parent_id
+    printf("Env alloc succeed! Env id is 0x%x\n", e->env_id);
 
     /* Step 4: Focus on initializing the sp register and cp0_status of env_tf field, located at this new Env. */
-    e->env_tf.regs[29] = USTACKTOP;    // sp register 用户栈栈顶
-    e->env_tf.cp0_status = 0x1000100c; // CPU status   rfe之后KUC = 1(表示在用户态) IEC = 1(表示开启中断)
+    struct Tcb *t;
+    if((r = thread_alloc(e, &t)) != 0){
+        return r;
+    }
+
+    t->tcb_status = THREAD_RUNNABLE;
+    t->tcb_tf.cp0_status = 0x1000100c;
+    t->tcb_tf.regs[29] = USTACKTOP - 4 * BY2PG * (t->tcb_id & 0x7);
 
     /* Step 5: Remove the new Env from env_free_list. */
     LIST_REMOVE(e, env_link);
@@ -387,9 +398,10 @@ load_icode(struct Env *e, u_char *binary, u_int size)
 
     /* Step 3: load the binary using elf loader. */
     load_elf(binary, size, &entry_point, (void *)e, load_icode_mapper);
-
+    e->env_threads[0].tcb_status = ENV_RUNNABLE;
+    LIST_INSERT_HEAD(tcb_sched_list, &e->env_threads[0], tcb_sched_link);
     /* Step 4: Set CPU's PC register as appropriate value. */
-    e->env_tf.pc = entry_point;   // 设置新进程的pc寄存器为elf文件的入口点
+    e->env_threads[0].tcb_tf.pc = entry_point;   // 设置新进程的pc寄存器为elf文件的入口点
 }
 
 /* Overview:
@@ -403,25 +415,25 @@ load_icode(struct Env *e, u_char *binary, u_int size)
  *  this function wraps the env_alloc and load_icode function.
  *  调用env_alloc进行进程初始化，调用load_icode加载ELF，创建进程
  */
-/*** exercise 3.8 ***/
-void
-env_create_priority(u_char *binary, int size, int priority)
-{
-    struct Env *e;
-    /* Step 1: Use env_alloc to alloc a new env. */
-    if (env_alloc(&e, 0) != 0) {
-        return;
-    }
+// /*** exercise 3.8 ***/
+// void
+// env_create_priority(u_char *binary, int size, int priority)
+// {
+//     struct Env *e;
+//     /* Step 1: Use env_alloc to alloc a new env. */
+//     if (env_alloc(&e, 0) != 0) {
+//         return;
+//     }
 
-    /* Step 2: assign priority to the new env. */
-    e->env_pri = priority;
+//     /* Step 2: assign priority to the new env. */
+//     e->env_pri = priority;
 
-    /* Step 3: Use load_icode() to load the named elf binary,
-       and insert it into env_sched_list using LIST_INSERT_HEAD. */
-    load_icode(e, binary, size);
-    LIST_INSERT_HEAD(env_sched_list, e, env_sched_link);
-//	printf("env_create id = %d\n", e->env_id);
-}
+//     /* Step 3: Use load_icode() to load the named elf binary,
+//        and insert it into env_sched_list using LIST_INSERT_HEAD. */
+//     load_icode(e, binary, size);
+//     LIST_INSERT_HEAD(env_sched_list, e, env_sched_link);
+// //	printf("env_create id = %d\n", e->env_id);
+// }
 /* Overview:
  *  创建进程
  * Allocate a new env with default priority value.
@@ -433,10 +445,17 @@ env_create_priority(u_char *binary, int size, int priority)
 void
 env_create(u_char *binary, int size)
 {
-     /* Step 1: Use env_create_priority to alloc a new env with priority 1 */
-    env_create_priority(binary, size, 1);
+    struct Env *e;
+    /* Step 1: Use env_alloc to alloc a new env. */
+    if (env_alloc(&e, 0) != 0) {
+        return;
+    }
+    e->env_threads[0].tcb_pri = 1;
+    /* Step 3: Use load_icode() to load the named elf binary,
+       and insert it into env_sched_list using LIST_INSERT_HEAD. */
+    load_icode(e, binary, size);
+    LIST_INSERT_HEAD(env_sched_list, e, env_sched_link);
 }
-
 /* Overview:
  *  Free env e and all memory it uses.
  *  释放进程
@@ -479,7 +498,7 @@ env_free(struct Env *e)
 
     /* Hint: return the environment to the free list. */
     // 将进程加到free_list中，并在调度队列中删除进程
-    e->env_status = ENV_FREE;
+    // e->env_status = ENV_FREE;
     LIST_INSERT_HEAD(&env_free_list, e, env_link);
     LIST_REMOVE(e, env_sched_link);
 }
@@ -501,7 +520,7 @@ env_destroy(struct Env *e)
         bcopy((void *)KERNEL_SP - sizeof(struct Trapframe),  // 从Kernel区域拷贝到TIMESTACK区域
               (void *)TIMESTACK - sizeof(struct Trapframe),
                 sizeof(struct Trapframe));
-        printf("i am killed ... \n");
+        printf("i am env, i am killed ... \n");
         LIST_REMOVE(e, env_link);
         sched_yield();
     }
@@ -510,182 +529,109 @@ env_destroy(struct Env *e)
 extern void env_pop_tf(struct Trapframe *tf, int id);  // id放到了CP0_ENTRYHI中作为TLB的index
 extern void lcontext(u_int contxt);
 
-/* Overview:
- *  Restore the register values in the Trapframe with env_pop_tf, 
- *  and switch the context from 'curenv' to 'e'.
- *
- * Post-Condition:
- *  Set 'e' as the curenv running environment.
- *
- * Hints:
- *  You may use these functions:
- *      env_pop_tf , lcontext.
- * 中断当前进程，运行新进程e
- */
-/*** exercise 3.10 ***/
-void
-env_run(struct Env *e)
-{
-    /* Step 1: save register state of curenv. */
-    /* Hint: if there is an environment running, 
-     *   you should switch the context and save the registers. 
-     *   You can imitate env_destroy() 's behaviors.*/
-    if(curenv) {  // 此时当前进程已经被时钟中断了，将上下文环境从TIMESTACK拷贝到TrapFrame中保存起来 ？？？
-        bcopy((void *)TIMESTACK - sizeof(struct Trapframe), // source: TIMESTACK区域存储中断时的CPU寄存器
-              (void *)(&(curenv->env_tf)), sizeof(struct Trapframe));  // target: 当前进程的env_tf区域
-        curenv->env_tf.pc = curenv->env_tf.cp0_epc;  // 当前进程的pc设置成cp0_epc寄存器中的值
+// lab4-challenge
+u_int mktcbid(struct Env *e, u_int thread_no) {
+    return (e->env_id << 3) | thread_no;  // 线程号构造方法为env_id与线程序号的拼接
+}
+
+int threadid2tcb(u_int threadid, struct Tcb **ptcb) {
+	struct Tcb *t;
+	struct Env *e;
+
+	if (threadid == 0) {  // 仿照envid2env，当threadid = 0时同样输出当前线程
+		*ptcb = curtcb;
+		return 0;
+	}
+
+	e = &envs[ENVX(threadid >> 3)];
+	t = &e->env_threads[threadid & 0x7];
+	if (t->tcb_status == ENV_FREE || t->tcb_id != threadid) {
+		*ptcb = 0;
+		return -E_BAD_TCB;
+	}
+	*ptcb = t;
+	return 0;
+}
+
+int thread_alloc(struct Env *e, struct Tcb **thread) {
+    if(e->env_thread_count >= MAX_THREAD){
+        return -E_THREAD_MAX;
+    }
+    u_int thread_no = 0;
+    while (thread_no < MAX_THREAD && e->env_threads[thread_no].tcb_status != THREAD_FREE) {
+        thread_no++;
+    }
+    e->env_thread_count++;
+
+    // 进行thread自身的初始化
+    struct Tcb *t = &e->env_threads[thread_no];
+    t->tcb_id = mktcbid(e, thread_no);
+    t->env_id = e->env_id;
+    t->tcb_status = THREAD_RUNNABLE;
+    t->tcb_tf.cp0_status = 0x1000100c;
+    t->tcb_tf.regs[29] = USTACKTOP - 4 * BY2PG * (t->tcb_id & 0x7);  // 设置线程的栈空间
+    t->tcb_exit_ptr = (void *)0;
+    LIST_INIT(&t->tcb_joined_list);
+    *thread = t;
+    printf("Thread alloc succeed! Thread id is 0x%x\n", t->tcb_id);
+    return 0;
+}
+
+void thread_free(struct Tcb *t) {
+    struct Env *e;
+    envid2env(t->env_id, &e, 0);
+    printf("[%08x] free tcb %08x\n", e->env_id, t->tcb_id);
+	e->env_thread_count--;
+	// if (e->env_thread_count == 0) {
+	// 	env_free(e);
+    //  printf("env thread count is %d\n", e->env_thread_count);
+    // }
+	t->tcb_status = ENV_FREE;
+}
+
+void thread_destroy(struct Tcb *t) {
+	if (t->tcb_status == ENV_RUNNABLE){
+		LIST_REMOVE(t,tcb_sched_link);
     }
 
-    /* Step 2: Set 'curenv' to the new environment. */
-    curenv = e;
+	thread_free(t);
+	if (curtcb == t) {
+		curtcb = NULL;
+		bcopy((void *)KERNEL_SP - sizeof(struct Trapframe),
+			(void *)TIMESTACK - sizeof(struct Trapframe),
+			sizeof(struct Trapframe));
+		printf("i am thread, i am killed ... \n");
+        // 检查进程中的线程是否全被kill了
+        struct Env *e;
+        envid2env(t->env_id, &e, 0);
+        if(e->env_thread_count == 0){
+            printf("all threads of env are killed, kill the env\n");
+            env_destroy(e);
+        } else {
+            sched_yield();
+        }
+	}
+}
+
+void thread_run(struct Tcb *t) {
+    if(curtcb) {  // 此时当前进程已经被时钟中断了，将上下文环境从TIMESTACK拷贝到TrapFrame中保存起来 ？？？
+        bcopy((void *)TIMESTACK - sizeof(struct Trapframe), // source: TIMESTACK区域存储中断时的CPU寄存器
+              (void *)(&(curtcb->tcb_tf)), sizeof(struct Trapframe));  // target: 当前进程的env_tf区域
+        struct Trapframe *tf = (struct Trapframe *)(TIMESTACK - sizeof(struct Trapframe));
+        curtcb->tcb_tf.pc = tf->cp0_epc;  // 当前进程的pc设置成cp0_epc寄存器中的值
+    }  // ?
+
+    curtcb = t;
+    envid2env(t->env_id, &curenv, 0);
+    curenv->env_runs++;
 
     /* Step 3: Use lcontext() to switch to its address space. */
-    lcontext(e->env_pgdir);  // 设置全局变量mCONTEXT为当前进程页目录地址，这个值将在TLB重填时用到。
+    lcontext(curenv->env_pgdir);  // 设置全局变量mCONTEXT为当前进程页目录地址，这个值将在TLB重填时用到。
 
     /* Step 4: Use env_pop_tf() to restore the environment's
      *   environment   registers and return to user mode.
      *
-     * Hint: You should use GET_ENV_ASID there. Think why?
-     *   (read <see mips run linux>, page 135-144)  // a1要被放到CP0_ENTRYHI中，其格式要求为GET_ENV_ASID(e->env_id)
      */
     // 调用 env_pop_tf 函数，恢复现场(有从TrapFrame中取出寄存器的值到当前环境的操作)、异常返回。
-    env_pop_tf(&(e->env_tf), GET_ENV_ASID(e->env_id));  // 这个函数的a1是干什么用的
+    env_pop_tf(&(curtcb->tcb_tf), GET_ENV_ASID(curenv->env_id));
 }
-
-void env_check()
-{
-    struct Env *temp, *pe, *pe0, *pe1, *pe2;
-    struct Env_list fl;
-    int re = 0;
-    /* should be able to allocate three envs */
-    pe0 = 0;
-    pe1 = 0;
-    pe2 = 0;
-    assert(env_alloc(&pe0, 0) == 0);
-    assert(env_alloc(&pe1, 0) == 0);
-    assert(env_alloc(&pe2, 0) == 0);
-
-    assert(pe0);
-    assert(pe1 && pe1 != pe0);
-    assert(pe2 && pe2 != pe1 && pe2 != pe0);
-
-    /* temporarily steal the rest of the free envs */
-    fl = env_free_list;
-    /* now this env_free list must be empty! */
-    LIST_INIT(&env_free_list);
-
-    /* should be no free memory */
-    assert(env_alloc(&pe, 0) == -E_NO_FREE_ENV);
-
-    /* recover env_free_list */
-    env_free_list = fl;
-
-    printf("pe0->env_id %d\n",pe0->env_id);
-    printf("pe1->env_id %d\n",pe1->env_id);
-    printf("pe2->env_id %d\n",pe2->env_id);
-
-    assert(pe0->env_id == 1024);
-    assert(pe1->env_id == 3073);
-    assert(pe2->env_id == 5122);
-    printf("env_init() work well!\n");
-
-    /* check envid2env work well */
-    pe2->env_status = ENV_FREE;
-    re = envid2env(pe2->env_id, &pe, 0);
-
-    assert(pe == 0 && re == -E_BAD_ENV);
-
-    pe2->env_status = ENV_RUNNABLE;
-    re = envid2env(pe2->env_id, &pe, 0);
-
-    assert(pe->env_id == pe2->env_id &&re == 0);
-
-    temp = curenv;
-    curenv = pe0;
-    re = envid2env(pe2->env_id, &pe, 1);
-    assert(pe == 0 && re == -E_BAD_ENV);
-    curenv = temp;
-    printf("envid2env() work well!\n");
-
-    /* check env_setup_vm() work well */
-    printf("pe1->env_pgdir %x\n",pe1->env_pgdir);
-    printf("pe1->env_cr3 %x\n",pe1->env_cr3);
-
-    assert(pe2->env_pgdir[PDX(UTOP)] == boot_pgdir[PDX(UTOP)]);
-    assert(pe2->env_pgdir[PDX(UTOP)-1] == 0);
-    printf("env_setup_vm passed!\n");
-
-    assert(pe2->env_tf.cp0_status == 0x10001004);
-    printf("pe2`s sp register %x\n",pe2->env_tf.regs[29]);
-
-    /* free all env allocated in this function */
-    LIST_INSERT_HEAD(env_sched_list, pe0, env_sched_link);
-    LIST_INSERT_HEAD(env_sched_list, pe1, env_sched_link);
-    LIST_INSERT_HEAD(env_sched_list, pe2, env_sched_link);
-
-    env_free(pe2);
-    env_free(pe1);
-    env_free(pe0);
-
-    printf("env_check() succeeded!\n");
-}
-
-void load_icode_check() {
-    /* check_icode.c from init/init.c */
-    extern u_char binary_user_check_icode_start[];
-    extern u_int binary_user_check_icode_size;
-    env_create(binary_user_check_icode_start, binary_user_check_icode_size);
-    struct Env* e;
-    Pte* pte;
-    u_int paddr;
-    assert(envid2env(1024, &e, 0) == 0);
-    /* text & data: 0x00401030 - 0x00409adc left closed and right open interval */
-    assert(pgdir_walk(e->env_pgdir, 0x00401000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 0xc) == 0x8fa40000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x26300001);
-    assert(pgdir_walk(e->env_pgdir, 0x00402000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x10800004);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00801821);
-    assert(pgdir_walk(e->env_pgdir, 0x00403000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x80a20000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x24060604);
-    assert(pgdir_walk(e->env_pgdir, 0x00404000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x04400043);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00000000);
-    assert(pgdir_walk(e->env_pgdir, 0x00405000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x00000000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00000000);
-    assert(pgdir_walk(e->env_pgdir, 0x00406000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x00000000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00000000);
-    assert(pgdir_walk(e->env_pgdir, 0x00407000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x7f400000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00000000);
-    assert(pgdir_walk(e->env_pgdir, 0x00408000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x0000fffe);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00000000);
-    assert(pgdir_walk(e->env_pgdir, 0x00409000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x00000000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 0x2aa) == 0x004099fc);
-    printf("text & data segment load right!\n");
-    /* bss        : 0x00409adc - 0x0040aab4 left closed and right open interval */
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 0x2b7) == 0x00000000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00000000);
-    assert(pgdir_walk(e->env_pgdir, 0x0040a000, 0, &pte) == 0);
-    assert(*((int *)KADDR(PTE_ADDR(*pte))) == 0x00000000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 0x2ac) == 0x00000000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 0x2ad) == 0x00000000);
-    assert(*((int *)KADDR(PTE_ADDR(*pte)) + 1023) == 0x00000000);
-
-    printf("bss segment load right!\n");
-
-    env_free(e);
-    printf("load_icode_check() succeeded!\n");
-}
-
-
-
-
-
-
-

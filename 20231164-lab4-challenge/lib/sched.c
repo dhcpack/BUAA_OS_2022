@@ -16,7 +16,8 @@ void sched_yield(void)
 {
     static int count = 0; // remaining time slices of current env
     static int point = 0; // current env_sched_list index
-    static struct Env *e = NULL;
+    // static struct Env *e = NULL;
+    static struct Tcb *t = NULL;
 
     /*  hint:
      *  1. if (count==0), insert `e` into `env_sched_list[1-point]`
@@ -30,33 +31,32 @@ void sched_yield(void)
      *  functions or macros below may be used (not all):
      *  LIST_INSERT_TAIL, LIST_REMOVE, LIST_FIRST, LIST_EMPTY
      */
-	if(count == 0 || e == NULL || e->env_status != ENV_RUNNABLE) {
-		if(e != NULL) {
-			LIST_REMOVE(e, env_sched_link);
-            LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_sched_link);  // 在env_sched_list中操作节点要用env_sched_link
-//			printf("list remove e\n");
+	if(count == 0 || t == NULL || t->tcb_status != THREAD_RUNNABLE) {
+		if(t != NULL) {
+			LIST_REMOVE(t, tcb_sched_link);
+            LIST_INSERT_TAIL(&tcb_sched_list[1 - point], t, tcb_sched_link);  // 在env_sched_list中操作节点要用env_sched_link
 		}
 
         while(1) {
-            while (LIST_EMPTY(&env_sched_list[point])) {
+            while (LIST_EMPTY(&tcb_sched_list[point])) {
 				point = 1 - point;
-//				printf("change env_sched_list\n");
-			}
-            e = LIST_FIRST(&env_sched_list[point]);
-            if(e -> env_status == ENV_FREE) {
-                LIST_REMOVE(e, env_sched_link);
-            } else if(e->env_status == ENV_NOT_RUNNABLE) {
-                LIST_REMOVE(e, env_sched_link);
-                LIST_INSERT_TAIL(&env_sched_list[1 - point], e, env_sched_link);
+                // printf("change list\n");
+            }
+            t = LIST_FIRST(&tcb_sched_list[point]);
+            if(t -> tcb_status == THREAD_FREE) {
+                LIST_REMOVE(t, tcb_sched_link);
+            } else if(t->tcb_status == THREAD_NOT_RUNNABLE) {
+                LIST_REMOVE(t, tcb_sched_link);
+                LIST_INSERT_TAIL(&tcb_sched_list[1 - point], t, tcb_sched_link);
             } else {
-				count = e->env_pri;
-//				printf("count initial %d env_id is %d\n", count, e->env_id);
-				break;
+				count = t->tcb_pri;
+                // printf("switch to a new tcb\n");
+                break;
             }
         }
     }
 
     count--;
-//	printf("count is %d\n", count);
-    env_run(e);
+    // printf("count is %d\n", count);
+    thread_run(t);
 }

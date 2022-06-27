@@ -290,17 +290,20 @@ int sys_env_alloc(void)
 		return r;
 	}
 	// 复制运行现场
-	bcopy((void *)(KERNEL_SP - sizeof(struct Trapframe)), (void *)&(e->env_tf), sizeof(struct Trapframe));
-
+	// bcopy((void *)(KERNEL_SP - sizeof(struct Trapframe)), (void *)&(e->env_tf), sizeof(struct Trapframe));
+	bcopy((void *)(KERNEL_SP - sizeof(struct Trapframe)), (void*)&(e->env_threads[0].tcb_tf), sizeof(struct Trapframe));
 	// 设置子进程的程序计数器  cp0_epc中的值已经加过4了 即syscall的后一条指令 相当于子进程的entry_point
-	e->env_tf.pc = e->env_tf.cp0_epc;
+	e->env_threads[0].tcb_tf.pc = e->env_threads[0].tcb_tf.cp0_epc;
+	// e->env_tf.pc = e->env_tf.cp0_epc;
 
 	// 更改子进程返回值 $v0 = 0
-	e->env_tf.regs[2] = 0;  // 子进程的返回值被赋值为0，在进程被调度时返回
+	e->env_threads[0].tcb_tf.regs[2] = 0;
+	// e->env_tf.regs[2] = 0;  // 子进程的返回值被赋值为0，在进程被调度时返回
 
 	// 其它初始化
-	e->env_pri = curenv->env_pri;
-	e->env_status = ENV_NOT_RUNNABLE;  // except that status is set to ENV_NOT_RUNNABLE
+	e->env_threads[0].tcb_pri = curenv->env_threads[0].tcb_pri;
+	e->env_threads[0].tcb_status = ENV_NOT_RUNNABLE;
+	// e->env_status = ENV_NOT_RUNNABLE;  // except that status is set to ENV_NOT_RUNNABLE
 
 	return e->env_id;   // 父进程的返回值是新建的子进程的envid
 	//	panic("sys_env_alloc not implemented");
@@ -323,31 +326,49 @@ int sys_set_env_status(int sysno, u_int envid, u_int status)
 {
 	// Your code here.
 	struct Env *env;
+	struct Tcb *t;
 	int ret;
+
+	if(status != ENV_FREE && status != ENV_NOT_RUNNABLE && status != ENV_RUNNABLE){
+		return -E_INVAL;
+	}
 
 	if((ret = envid2env(envid, &env, 0)) != 0){
 		return ret;
 	}
-	// printf("status is %d, env status is %d\n", status, env->env_status);
-	if (!(status == ENV_FREE || status == ENV_RUNNABLE || status == ENV_NOT_RUNNABLE)) {
-		return -E_INVAL;
+
+	// t = &env->env_threads[0];
+	
+	// if(status == ENV_RUNNABLE && t->tcb_status != ENV_RUNNABLE) {
+	// 	LIST_INSERT_HEAD(tcb_sched_list, t, tcb_sched_link);
+	// } else if(status != ENV_RUNNABLE && t->tcb_status == ENV_RUNNABLE) {
+	// 	LIST_REMOVE(t, tcb_sched_link);
+	// }
+	// env->env_threads[0].tcb_status = status;
+	// // printf("set succeed\n");
+	// if(status == ENV_FREE) {
+	// 	env_destroy(env);  // TODO
+	// }
+	// return 0;
+	// //	panic("sys_env_set_status not implemented");
+	int thread_no = 0;
+	for (thread_no = 0; thread_no < MAX_THREAD; thread_no++){
+		t = &env->env_threads[thread_no];
+		if(t->tcb_status == THREAD_FREE){
+			continue;
+		}
+		if(status == ENV_RUNNABLE && t->tcb_status == THREAD_NOT_RUNNABLE) {
+			LIST_INSERT_HEAD(tcb_sched_list, t, tcb_sched_link);
+			t->tcb_status = status;
+		} else if(status != ENV_RUNNABLE && t->tcb_status == ENV_RUNNABLE) {
+			LIST_REMOVE(t, tcb_sched_link);
+			t->tcb_status = status;
+		}
 	}
-	if(status == ENV_RUNNABLE && env->env_status != ENV_RUNNABLE) {
-		LIST_INSERT_TAIL(env_sched_list, env, env_sched_link);  // TODO 这句话是必要的吗 env_sched_list里面的env块都是ENV_RUNNABLE吗
-	} else if(status != ENV_RUNNABLE && env->env_status == ENV_RUNNABLE) {
-		LIST_REMOVE(env, env_sched_link);
+	if(status == ENV_FREE) {
+		env_destroy(env);  // TODO
 	}
-	env->env_status = status;
-	// printf("set succeed\n");
-	if(env->env_status == ENV_FREE) {
-		env_destroy(env);
-	}
-	// printf("finish\n");
-	// LIST_FOREACH(env, env_sched_list, env_sched_link) {
-    //     printf("envid is %d, env_status is %d\n", env->env_id, env->env_status);
-    // }     
 	return 0;
-	//	panic("sys_env_set_status not implemented");
 }
 
 /* Overview:
@@ -407,10 +428,13 @@ void sys_ipc_recv(int sysno, u_int dstva)
 	// 阻塞当前进程，即把当前进程的状态置为不可运行（ENV_NOT_RUNNABLE）
 	// 最后放弃CPU（调用相关函数重新进行调度），安心等待发送方将数据发送过来
 	curenv->env_ipc_recving = 1;
+	curenv->env_ipc_waiting_thread_no = curtcb->tcb_id & 0x7;
 	curenv->env_ipc_dstva = dstva;
-	curenv->env_status = ENV_NOT_RUNNABLE;
+	if (curtcb->tcb_status == ENV_RUNNABLE){
+		LIST_REMOVE(curtcb,tcb_sched_link);
+	}
+	curtcb->tcb_status = ENV_NOT_RUNNABLE;
 	sys_yield();
-    return;
 }
 
 /* Overview:
@@ -435,8 +459,9 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 					 u_int perm)
 {
 	int r;
-	struct Env *e;
+	struct Env  *e;
 	struct Page *p;
+	struct Tcb  *t;
 	// 根据envid找到相应进程，如果指定进程为可接收状态(考虑env_ipc_recving)，则发送成功
 	// 否则，函数返回-E_IPC_NOT_RECV，表示目标进程未处于接受状态
 	// 清除接收进程的接收状态，将相应数据填入进程控制块，传递物理页面的映射关系
@@ -454,6 +479,7 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
         return -E_INVAL;
     }
 
+	t = &e->env_threads[e->env_ipc_waiting_thread_no];
     if(srcva != 0) {
 		p = page_lookup(curenv->env_pgdir, srcva, NULL);
 		if(p == NULL) {
@@ -468,6 +494,97 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 	e->env_ipc_value = value;
 	e->env_ipc_perm = perm;
 	e->env_ipc_recving = 0;
-	e->env_status = ENV_RUNNABLE;
+	t->tcb_status = ENV_RUNNABLE;
+	LIST_INSERT_HEAD(tcb_sched_list, t, tcb_sched_link);
+	return 0;
+}
+
+// lab4-challenge
+u_int sys_get_threadid(void)
+{
+	return curtcb->tcb_id;
+}
+
+int sys_thread_destroy(int sysno, u_int threadid)
+{
+	int r;
+	struct Tcb *t;
+	if ((r = threadid2tcb(threadid, &t)) < 0) {
+		return r;
+	}
+	struct Tcb *tmp;
+	while (!LIST_EMPTY(&t->tcb_joined_list)) {  // 该进程结束，所有在join队列中的进程开始运行
+		tmp = LIST_FIRST(&t->tcb_joined_list);
+		LIST_REMOVE(tmp, tcb_joined_link);
+		*(tmp->tcb_join_retval) = t->tcb_exit_ptr;  // 指针指向接收到的返回值
+		// printf("wake up tcbid is 0x%x\n",tmp->thread_id);
+		sys_set_thread_status(0,tmp->tcb_id,ENV_RUNNABLE);
+		printf("tcb %08x in joinlist wake up\n", t->tcb_id);
+	}
+	printf("[%08x] destroying tcb %08x\n", curenv->env_id, t->tcb_id);
+	thread_destroy(t);
+	return 0;
+}
+
+int sys_thread_alloc(void)
+{
+	int r;
+	struct Tcb *t;
+	if(!curenv){
+		return -E_BAD_ENV;
+	}
+	if((r = thread_alloc(curenv, &t)) != 0){
+		return r;
+	}
+	// 进行和ENV相关的初始化
+	t->tcb_pri = curenv->env_threads[0].tcb_pri;
+	t->tcb_status = THREAD_NOT_RUNNABLE;
+	t->tcb_tf.regs[2] = 0;  // 返回值设置为0
+	t->tcb_tf.pc = t->tcb_tf.cp0_epc;
+	return t->tcb_id & 0x7;
+}
+
+int sys_set_thread_status(int sysno, u_int threadid, u_int status){
+	struct Tcb *t;
+	int r;
+
+	if(status != THREAD_FREE && status != THREAD_NOT_RUNNABLE && status != THREAD_RUNNABLE){
+		return -E_INVAL;
+	}
+	if((r = threadid2tcb(threadid, &t) != 0)){
+		return r;
+	}
+
+	if(status == THREAD_RUNNABLE && t->tcb_status != THREAD_RUNNABLE) {
+		LIST_INSERT_HEAD(tcb_sched_list, t, tcb_sched_link);
+	} else if(status != THREAD_RUNNABLE && t->tcb_status == THREAD_RUNNABLE) {
+		LIST_REMOVE(t, tcb_sched_link);
+	}
+	t->tcb_status = status;
+	return 0;
+}
+
+int sys_thread_join(int sysno, u_int threadid, void **retval){
+	struct Tcb *t;
+	int r;
+
+	if((r = threadid2tcb(threadid, &t)) != 0){
+		return r;
+	}
+
+	if (t->tcb_status == THREAD_FREE) {  // 如果等待的线程已经结束，直接将retval指向线程的返回值
+		if (retval != 0) {
+			*retval = t->tcb_exit_ptr;
+		}
+		return 0;
+	}
+
+	LIST_INSERT_HEAD(&t->tcb_joined_list, curtcb, tcb_joined_link);
+	curtcb->tcb_join_retval = retval;  // 保存该地址
+	sys_set_thread_status(0, curtcb->tcb_id, THREAD_NOT_RUNNABLE);  // 阻塞当前进程
+	struct Trapframe *trap = (struct Trapframe *)(KERNEL_SP - sizeof(struct Trapframe));
+	trap->regs[2] = 0;
+	trap->pc = trap->cp0_epc;
+	sys_yield();
 	return 0;
 }

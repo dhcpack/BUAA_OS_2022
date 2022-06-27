@@ -5,12 +5,16 @@
 void
 exit(void)
 {
-	//close_all();
-	syscall_env_destroy(0);
+	// close_all();
+	// syscall_env_destroy(0);
+	struct Tcb *t = &env->env_threads[syscall_getthreadid()&0x7];
+	// t->tcb_exit_value = 0;
+	syscall_thread_destroy(0);  // 0代表当前线程
 }
 
-
 struct Env *env;
+struct Tcb *tcb;
+
 // 在子进程第一次被调度的时候（当然这时还是在fork函数中）需要对 env 指针进行更新，使其仍指向当前进程的控制块。？？
 void
 libmain(int argc, char **argv)
