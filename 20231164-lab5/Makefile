@@ -3,7 +3,7 @@
 # Copyright (C) 2007 Beihang University
 # Written by Zhu Like ( zlike@cse.buaa.edu.cn )
 #
-
+ 
 drivers_dir	  := drivers
 boot_dir	  := boot
 user_dir	  := user
@@ -52,6 +52,11 @@ elf:
 
 debug:
 	/OSLAB/gxemul -E testmips -C R3000 -M 64 -d gxemul/fs.img ./gxemul/vmlinux -V
+
+1:
+	make clean
+	make
+	make elf
 
 include include.mk
 

@@ -186,6 +186,7 @@ read_block(u_int blockno, void **blk, u_int *isnew)
 
 // Overview:
 //	Wirte the current contents of the block out to disk.
+// 向blockno磁盘块写入数据
 void
 write_block(u_int blockno)
 {
@@ -245,7 +246,7 @@ free_block(u_int blockno)
 // Post-Condition:
 //	Return block number allocated on success,
 //		   -E_NO_DISK if we are out of blocks.
-// 寻找一个空闲磁盘块，并写入？
+// 申请一个空闲磁盘块
 int
 alloc_block_num(void)
 {
@@ -577,7 +578,7 @@ dir_lookup(struct File *dir, char *name, struct File **file)
 	// Step 1: Calculate nblock: how many blocks are there in this dir？
 	nblock = dir->f_size / BY2BLK;
 
-	for (i = 0; i < nblock; i++) {
+	for (i = 0; i < nblock; i++) {  // 遍历目录下的所有磁盘块
 		// Step 2: Read the i'th block of the dir.
 		// Hint: Use file_get_block.
 		if ((r = file_get_block(dir, i, &blk)) < 0) {  // 读取磁盘块的信息，并将其保存在内存中
@@ -602,6 +603,7 @@ dir_lookup(struct File *dir, char *name, struct File **file)
 // Overview:
 //	Alloc a new File structure under specified directory. Set *file
 //	to point at a free File structure in dir.
+// 在dir目录下创建一个文件
 int
 dir_alloc_file(struct File *dir, struct File **file)
 {
@@ -659,6 +661,7 @@ skip_slash(char *p)
 //	the file is in.
 //	If we cannot find the file but find the directory it should be in, set
 //	*pdir and copy the final path element into lastelem.
+// 查找某个目录下(path路径的所有目录)是否含有某个文件 pdir指向目录 pfile指向文件
 int
 walk_path(char *path, struct File **pdir, struct File **pfile, char *lastelem)
 {
@@ -731,6 +734,7 @@ walk_path(char *path, struct File **pdir, struct File **pfile, char *lastelem)
 // Post-Condition:
 //	On success set *pfile to point at the file and return 0.
 //	On error return < 0.
+// 打开文件，*file设置为文件指针
 int
 file_open(char *path, struct File **file)
 {
@@ -743,6 +747,7 @@ file_open(char *path, struct File **file)
 // Post-Condition:
 //	On success set *file to point at the file and return 0.
 // 	On error return < 0.
+// 在path路径下创建文件
 int
 file_create(char *path, struct File **file)
 {
@@ -778,6 +783,7 @@ file_create(char *path, struct File **file)
 //	(Remember to clear the f->f_indirect pointer so you'll know whether it's valid!)
 //
 // Hint: use file_clear_block.
+// 缩小文件
 void
 file_truncate(struct File *f, u_int newsize)
 {
@@ -809,6 +815,7 @@ file_truncate(struct File *f, u_int newsize)
 
 // Overview:
 //	Set file size to newsize.
+// 设定文件大小
 int
 file_set_size(struct File *f, u_int newsize)
 {
@@ -832,6 +839,7 @@ file_set_size(struct File *f, u_int newsize)
 //	check whether that disk block is dirty.  If so, write it out.
 //
 // Hint: use file_map_block, block_is_dirty, and write_block.
+// 增大文件
 void
 file_flush(struct File *f)
 {
@@ -855,6 +863,7 @@ file_flush(struct File *f)
 
 // Overview:
 //	Sync the entire file system.  A big hammer.
+// 同步文件
 void
 fs_sync(void)
 {
@@ -868,6 +877,7 @@ fs_sync(void)
 
 // Overview:
 //	Close a file.
+// 关闭文件
 void
 file_close(struct File *f)
 {
@@ -880,6 +890,7 @@ file_close(struct File *f)
 
 // Overview:
 //	Remove a file by truncating it and then zeroing the name.
+// 删除文件
 int
 file_remove(char *path)
 {
@@ -905,5 +916,3 @@ file_remove(char *path)
 
 	return 0;
 }
-
-

@@ -136,7 +136,7 @@ fsipc_remove(const char *path)
 
 	// Step 2: Transform fsipcbuf to struct Fsreq_remove*
 	struct Fsreq_remove *req;
-	req = (struct Fsreq_open *)fsipcbuf;
+	req = (struct Fsreq_remove *)fsipcbuf;
 
 	// Step 3: Copy path to path in req.
 	strcpy((char *)req->req_path, path);
