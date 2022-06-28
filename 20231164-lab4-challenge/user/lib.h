@@ -133,6 +133,7 @@ int  pthread_cancel(pthread_t thread);
 int  pthread_join(pthread_t thread, void **retval);
 int  pthread_detach(pthread_t thread);
 int  pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
+pthread_t pthread_self(void);
 
 // sem.c
 int  sem_init(sem_t *sem, int pshared, unsigned int value);

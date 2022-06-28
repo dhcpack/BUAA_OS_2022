@@ -49,7 +49,7 @@ void umain()
     u_int ret = -2;
     a[0] = syscall_get_threadid();
     pthread_attr_t attr;
-    pthread_attr_setdetachstate(&attr, JOINABLE_STATE);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     pthread_t thread1;
     pthread_t thread2;
     pthread_t thread3;

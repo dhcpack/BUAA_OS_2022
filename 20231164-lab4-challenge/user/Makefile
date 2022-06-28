@@ -24,6 +24,7 @@ all: tltest.x tltest.b \
 	fktest.x fktest.b pingpong.x pingpong.b idle.x \
 	pttest.x pttest.b \
 	ptjointest.x ptjointest.b \
+	ptdetachtest.x ptdetachtest.b \
 	$(USERLIB) entry.o syscall_wrap.o
 
 %.x: %.b.c

@@ -45,22 +45,22 @@ void *test4(void *args)
 
 void umain()
 {
-    u_int a[1];
+    u_int a;
     u_int ret = -2;
-    a[0] = syscall_get_threadid();
+    a = pthread_self();
     pthread_attr_t attr;
-    pthread_attr_setdetachstate(&attr, JOINABLE_STATE);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     pthread_t thread1;
     pthread_t thread2;
     pthread_t thread3;
     pthread_t thread4;
-    pthread_detach(a[0]);
+    pthread_detach(pthread_self());
     writef("pthread detach succeed\n");
-    pthread_create(&thread1, &attr, test1, (void *)a);
+    pthread_create(&thread1, &attr, test1, (void *)&a);
     writef("pthread1 create succeed\n");
-    pthread_create(&thread2, &attr, test2, (void *)a);
+    pthread_create(&thread2, &attr, test2, (void *)&a);
     writef("pthread2 create succeed\n");
-    pthread_create(&thread3, &attr, test3, (void *)a);
+    pthread_create(&thread3, &attr, test3, (void *)&a);
     writef("pthread3 create succeed\n");
     int b = 0;
     while (b < 10) {

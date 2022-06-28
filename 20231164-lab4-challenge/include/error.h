@@ -24,8 +24,9 @@
 // define for lab4-challenge
 #define E_BAD_TCB  13
 #define E_THREAD_MAX     14  // current env has max threads
-#define E_THREAD_NOT_FOUND  15
+#define E_THREAD_NOT_FOUND  15  // thread not found
 #define E_THREAD_JOIN_FAIL  16  // detached thread cannot join
+#define E_THREAD_DETACHED_FAIL  17  // thread already joined and waiting
 
 #define MAXERROR 16  // TODO
 

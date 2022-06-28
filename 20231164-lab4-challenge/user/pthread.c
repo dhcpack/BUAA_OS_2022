@@ -102,12 +102,30 @@ int pthread_detach(pthread_t thread) {
 			}
 		}
 		user_bzero(t, sizeof(struct Tcb));  // 释放线程所有资源
+	} else if (t->join_times != 0){
+		return -E_THREAD_DETACHED_FAIL;
 	} else {
 		t->tcb_detach_state = DETACHED_STATE;
 	}
 	return 0;
 }
 
+/* 
+ * parameter meanings:
+ * pthread_attr_t * attr: 指向线程属性结构体的指针
+ * detachstate: 分离状态 PTHREAD_CREATE_JOINABLE or PTHREAD_CREATE_DETACHED
+ * 
+ * results:
+ * 线程分离后资源自动回收，不能被join
+ */
 int pthread_attr_setdetachstate(pthread_attr_t * attr, int detachstate) {
 	attr->detach_state = detachstate;
+}
+
+/* 
+ * results:
+ * 得到当前线程id
+ */
+pthread_t pthread_self(void) {
+	return syscall_get_threadid();
 }

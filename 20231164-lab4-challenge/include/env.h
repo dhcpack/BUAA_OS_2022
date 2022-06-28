@@ -27,6 +27,9 @@
 #define JOINABLE_STATE  0
 #define DETACHED_STATE  1
 
+#define PTHREAD_CREATE_JOINABLE  0
+#define PTHREAD_CREATE_DETACHED  1
+
 struct Pthread_attr {
 	u_int detach_state;
 };
@@ -38,7 +41,7 @@ struct Tcb{
 	u_int tcb_status;
 	u_int tcb_pri;
 	u_int env_id;
-	LIST_ENTRY(Tcb) tcb_sched_link;  // 调度用
+	LIST_ENTRY(Tcb) tcb_sched_link;  // 调度队列中的节点
 
 	// tcb_exit information
 	void *tcb_exit_ptr;
