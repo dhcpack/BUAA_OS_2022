@@ -24,6 +24,13 @@
 #define THREAD_RUNNABLE 1
 #define THREAD_NOT_RUNNABLE 2
 
+#define JOINABLE_STATE  0
+#define DETACHED_STATE  1
+
+struct Pthread_attr {
+	u_int detach_state;
+};
+
 struct Tcb{
 	// tcb_alloc information
 	struct Trapframe tcb_tf;
@@ -31,15 +38,20 @@ struct Tcb{
 	u_int tcb_status;
 	u_int tcb_pri;
 	u_int env_id;
-	LIST_ENTRY(Tcb) tcb_sched_link;
+	LIST_ENTRY(Tcb) tcb_sched_link;  // 调度用
 
 	// tcb_exit information
 	void *tcb_exit_ptr;
 
+	// tcb_join information
 	LIST_ENTRY(Tcb) tcb_joined_link;
 	LIST_HEAD(Tcb_joined_list, Tcb);
-	struct Tcb_joined_list tcb_joined_list;
+	struct Tcb_joined_list tcb_joined_list;  // 记录的是等待这个线程结束的线程
 	void **tcb_join_retval;  // tcb_join_retval保存线程返回值应该保存到的地址(join线程执行完，将tcb_exit_ptr赋值给等待进程的该位置)
+	u_int join_times;  // 记录该线程join的次数，保证了等待所有线程结束才能继续运行
+
+	// tcb_detach
+	u_int tcb_detach_state;
 };
 
 struct Env {

@@ -26,15 +26,24 @@ void sched_yield(void)
      *     then search through `env_sched_list[point]` for a runnable env `e`, 
      *     and set count = e->env_pri
      *  3. count--
-     *  4. env_run()
+     *  4. thread_run()
      *
      *  functions or macros below may be used (not all):
      *  LIST_INSERT_TAIL, LIST_REMOVE, LIST_FIRST, LIST_EMPTY
      */
 	if(count == 0 || t == NULL || t->tcb_status != THREAD_RUNNABLE) {
 		if(t != NULL) {
-			LIST_REMOVE(t, tcb_sched_link);
-            LIST_INSERT_TAIL(&tcb_sched_list[1 - point], t, tcb_sched_link);  // 在env_sched_list中操作节点要用env_sched_link
+            // printf("dd\n");
+            if(t->tcb_status == THREAD_RUNNABLE){
+                LIST_REMOVE(t, tcb_sched_link);
+                // struct Tcb *tt = LIST_FIRST(&tcb_sched_list[point]);;
+                // while (tt!=NULL)
+                // {
+                //     printf("tcb id is %x\n", tt->tcb_id);
+                //     tt = LIST_NEXT(tt, tcb_sched_link);
+                // }
+                LIST_INSERT_TAIL(&tcb_sched_list[1 - point], t, tcb_sched_link);  // 在env_sched_list中操作节点要用env_sched_link
+            }
 		}
 
         while(1) {
@@ -44,11 +53,14 @@ void sched_yield(void)
             }
             t = LIST_FIRST(&tcb_sched_list[point]);
             if(t -> tcb_status == THREAD_FREE) {
+                // printf("%d\n", t->tcb_id);
                 LIST_REMOVE(t, tcb_sched_link);
             } else if(t->tcb_status == THREAD_NOT_RUNNABLE) {
+                // printf("22\n");
                 LIST_REMOVE(t, tcb_sched_link);
                 LIST_INSERT_TAIL(&tcb_sched_list[1 - point], t, tcb_sched_link);
             } else {
+                // printf("33\n");
 				count = t->tcb_pri;
                 // printf("switch to a new tcb\n");
                 break;

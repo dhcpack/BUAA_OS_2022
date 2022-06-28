@@ -30,7 +30,9 @@ void umain() {
 	args[1] = 2;
 	args[2] = 3;
 	pthread_t son;
-	thread = pthread_create(&son,NULL,test,(void *) args);
+    pthread_attr_t attr;
+	pthread_attr_setdetachstate(&attr, JOINABLE_STATE);
+	thread = pthread_create(&son, &attr, test, (void *) args);
 	writef("create successful\n");
 	if (!thread) {
 		while (1) {

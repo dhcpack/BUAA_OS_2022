@@ -22,8 +22,9 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_
 	t->tcb_tf.regs[29] -= 4;  // ?
 	t->tcb_tf.regs[4] = arg;  // 传递给函数的参数
 	t->tcb_tf.regs[31] = exit;  // 线程的返回地址
+	t->tcb_detach_state = attr->detach_state;  // attr仅用来表示分离状态
 
-    syscall_set_thread_status(t->tcb_id, THREAD_RUNNABLE);
+	syscall_set_thread_status(t->tcb_id, THREAD_RUNNABLE);
 	*thread = t->tcb_id;
 	return 0;
 }
@@ -33,7 +34,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_
  * retval: 一个指向返回状态值的指针
  */
 void pthread_exit(void *retval){
-    u_int threadid = syscall_getthreadid();
+    u_int threadid = syscall_get_threadid();
     struct Tcb *t = &env->env_threads[threadid & 0x7];
 	t->tcb_exit_ptr = retval;
 	syscall_thread_destroy(threadid);
@@ -71,7 +72,42 @@ int pthread_cancel(pthread_t thread){
  * parameter meanings:
  * thread: 用于指定接收哪个线程的返回值；
  * retval: 表示接收到的返回值
+ * 
+ * requirements:
+ * 目标进程必须是joinable
  */
 int pthread_join(pthread_t thread, void **retval){
     return syscall_thread_join(thread, retval);
+}
+
+/* 
+ * parameter meanings:
+ * thread: 分离的线程
+ * 
+ * results:
+ * 线程分离后资源自动回收，不能被join
+ */
+int pthread_detach(pthread_t thread) {
+	struct Tcb *t = &env->env_threads[thread & 0x7];
+	int r;
+	if (t->tcb_id != thread) {
+		return -E_THREAD_NOT_FOUND;
+	}
+	if (t->tcb_status == THREAD_FREE) {
+		u_int sp = USTACKTOP - BY2PG * 4 * (thread & 0x7);  // 当前线程栈顶
+		int i;
+		for(i = 1; i <= 4; ++i) {
+			if((r = syscall_mem_unmap(0, sp - i * BY2PG) != 0)) {  // 把线程占有的空间释放
+				return r;
+			}
+		}
+		user_bzero(t, sizeof(struct Tcb));  // 释放线程所有资源
+	} else {
+		t->tcb_detach_state = DETACHED_STATE;
+	}
+	return 0;
+}
+
+int pthread_attr_setdetachstate(pthread_attr_t * attr, int detachstate) {
+	attr->detach_state = detachstate;
 }

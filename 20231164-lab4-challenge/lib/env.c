@@ -398,7 +398,7 @@ load_icode(struct Env *e, u_char *binary, u_int size)
 
     /* Step 3: load the binary using elf loader. */
     load_elf(binary, size, &entry_point, (void *)e, load_icode_mapper);
-    e->env_threads[0].tcb_status = ENV_RUNNABLE;
+    e->env_threads[0].tcb_status = THREAD_RUNNABLE;
     LIST_INSERT_HEAD(tcb_sched_list, &e->env_threads[0], tcb_sched_link);
     /* Step 4: Set CPU's PC register as appropriate value. */
     e->env_threads[0].tcb_tf.pc = entry_point;   // 设置新进程的pc寄存器为elf文件的入口点
@@ -571,6 +571,8 @@ int thread_alloc(struct Env *e, struct Tcb **thread) {
     t->tcb_tf.cp0_status = 0x1000100c;
     t->tcb_tf.regs[29] = USTACKTOP - 4 * BY2PG * (t->tcb_id & 0x7);  // 设置线程的栈空间
     t->tcb_exit_ptr = (void *)0;
+    t->tcb_detach_state = JOINABLE_STATE;
+    t->join_times = 0;
     LIST_INIT(&t->tcb_joined_list);
     *thread = t;
     printf("Thread alloc succeed! Thread id is 0x%x\n", t->tcb_id);
@@ -586,12 +588,13 @@ void thread_free(struct Tcb *t) {
 	// 	env_free(e);
     //  printf("env thread count is %d\n", e->env_thread_count);
     // }
-	t->tcb_status = ENV_FREE;
+	t->tcb_status = THREAD_FREE;
 }
 
 void thread_destroy(struct Tcb *t) {
 	if (t->tcb_status == ENV_RUNNABLE){
-		LIST_REMOVE(t,tcb_sched_link);
+		LIST_REMOVE(t, tcb_sched_link);
+        // printf("remove %x from sched_list\n", t->tcb_id);
     }
 
 	thread_free(t);
@@ -604,6 +607,7 @@ void thread_destroy(struct Tcb *t) {
         // 检查进程中的线程是否全被kill了
         struct Env *e;
         envid2env(t->env_id, &e, 0);
+        // printf("remain threads is %d\n", e->env_thread_count);
         if(e->env_thread_count == 0){
             printf("all threads of env are killed, kill the env\n");
             env_destroy(e);
@@ -615,23 +619,20 @@ void thread_destroy(struct Tcb *t) {
 
 void thread_run(struct Tcb *t) {
     if(curtcb) {  // 此时当前进程已经被时钟中断了，将上下文环境从TIMESTACK拷贝到TrapFrame中保存起来 ？？？
-        bcopy((void *)TIMESTACK - sizeof(struct Trapframe), // source: TIMESTACK区域存储中断时的CPU寄存器
-              (void *)(&(curtcb->tcb_tf)), sizeof(struct Trapframe));  // target: 当前进程的env_tf区域
         struct Trapframe *tf = (struct Trapframe *)(TIMESTACK - sizeof(struct Trapframe));
+        bcopy((void *)tf, // source: TIMESTACK区域存储中断时的CPU寄存器
+              (void *)(&(curtcb->tcb_tf)), sizeof(struct Trapframe));  // target: 当前进程的env_tf区域
         curtcb->tcb_tf.pc = tf->cp0_epc;  // 当前进程的pc设置成cp0_epc寄存器中的值
-    }  // ?
+    }
 
     curtcb = t;
     envid2env(t->env_id, &curenv, 0);
     curenv->env_runs++;
+    // printf("addr is %x\n", t);
 
     /* Step 3: Use lcontext() to switch to its address space. */
     lcontext(curenv->env_pgdir);  // 设置全局变量mCONTEXT为当前进程页目录地址，这个值将在TLB重填时用到。
 
-    /* Step 4: Use env_pop_tf() to restore the environment's
-     *   environment   registers and return to user mode.
-     *
-     */
     // 调用 env_pop_tf 函数，恢复现场(有从TrapFrame中取出寄存器的值到当前环境的操作)、异常返回。
     env_pop_tf(&(curtcb->tcb_tf), GET_ENV_ASID(curenv->env_id));
 }

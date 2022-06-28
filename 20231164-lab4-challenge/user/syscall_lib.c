@@ -99,7 +99,7 @@ int syscall_thread_destroy(u_int threadid)
 	return msyscall(SYS_thread_destroy, threadid, 0, 0, 0, 0);
 }
 
-u_int syscall_getthreadid() 
+u_int syscall_get_threadid() 
 {
 	return msyscall(SYS_get_threadid, 0, 0, 0, 0, 0);
 }

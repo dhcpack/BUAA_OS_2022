@@ -131,6 +131,8 @@ int  pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start
 void pthread_exit(void *retval);
 int  pthread_cancel(pthread_t thread);
 int  pthread_join(pthread_t thread, void **retval);
+int  pthread_detach(pthread_t thread);
+int  pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 
 // sem.c
 int  sem_init(sem_t *sem, int pshared, unsigned int value);
@@ -143,7 +145,7 @@ int  sem_getvalue(sem_t *sem, int *sval);
 // syscall_lib.c
 int syscall_thread_alloc();
 int syscall_thread_destroy(u_int threadid);
-u_int syscall_getthreadid();
+u_int syscall_get_threadid();
 int syscall_set_thread_status(u_int threadid, u_int status);
 int syscall_thread_join(u_int threadid, void **value_ptr);
 

@@ -25,8 +25,8 @@
 #define E_BAD_TCB  13
 #define E_THREAD_MAX     14  // current env has max threads
 #define E_THREAD_NOT_FOUND  15
+#define E_THREAD_JOIN_FAIL  16  // detached thread cannot join
 
-
-#define MAXERROR 12  // TODO
+#define MAXERROR 16  // TODO
 
 #endif // _ERROR_H_
