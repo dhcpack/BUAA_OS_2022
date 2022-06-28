@@ -595,9 +595,9 @@ int sys_thread_join(int sysno, u_int threadid, void **retval){
 	// printf("tcb%x join times is %d\n",curtcb->tcb_id, curtcb->join_times);
 	curtcb->tcb_join_retval = retval;  // 保存该地址
 	sys_set_thread_status(0, 0, THREAD_NOT_RUNNABLE);  // 阻塞当前进程
-	struct Trapframe *trap = (struct Trapframe *)(KERNEL_SP - sizeof(struct Trapframe));
-	trap->regs[2] = 0;
-	trap->pc = trap->cp0_epc;
+	// struct Trapframe *trap = (struct Trapframe *)(KERNEL_SP - sizeof(struct Trapframe));
+	// trap->regs[2] = 0;
+	// trap->pc = trap->cp0_epc;
 	sys_yield();
 	return 0;
 }

@@ -13,7 +13,7 @@ extern void libmain();
 extern void exit();
 
 extern struct Env *env;
-
+extern struct Tcb *tcb;
 
 #define USED(x) (void)(x)
 //////////////////////////////////////////////////////printf

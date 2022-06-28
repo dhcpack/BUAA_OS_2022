@@ -86,11 +86,24 @@ struct Env {
 
 	// lab4-challenge
 	u_int env_thread_count;              // current number of threads this env hold
-	struct Tcb env_threads[MAX_THREAD];  // threads of this env(max num is 8)
+	struct Tcb env_threads[MAX_THREAD];  // threads of this env(max num is 8)  直接构造出来Thread，所以是Tcb数组
 };
 
-struct Sem{
+#define THREAD_SEM  0  // sem_shared取值为THREAD_SEM时信号量只能在线程间共享
+#define MAX_WAIT_THREAD  8
+#define SEM_FREE   0
+#define SEM_VALID  1
 
+struct Sem{
+	int sem_value;
+	int sem_shared;
+	int sem_status;
+
+	u_int sem_envid;
+	u_int sem_wait_count;
+	u_int sem_head_index;
+	u_int sem_tail_index;  // 循环队列
+	struct Tcb* sem_wait_list[MAX_WAIT_THREAD];  // 保存Tcb指针，所以是指针数组
 };
 
 LIST_HEAD(Env_list, Env);

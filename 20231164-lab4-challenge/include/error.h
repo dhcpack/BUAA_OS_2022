@@ -22,12 +22,17 @@
 #define E_NOT_EXEC	12	// File not a valid executable
 
 // define for lab4-challenge
+// pthread
 #define E_BAD_TCB  13
-#define E_THREAD_MAX     14  // current env has max threads
+#define E_THREAD_MAX     14  // current env has max threads or current sem has max threads
 #define E_THREAD_NOT_FOUND  15  // thread not found
 #define E_THREAD_JOIN_FAIL  16  // detached thread cannot join
 #define E_THREAD_DETACHED_FAIL  17  // thread already joined and waiting
 
-#define MAXERROR 16  // TODO
+// sem
+#define E_SEM_NOT_FOUND  18  // sem not found in current env scope
+#define E_SEM_AGAIN     19  // semaphore value <= 0
+#define E_SEM_FREE      20  // action on a free semaphore
+#define MAXERROR 20  // TODO
 
 #endif // _ERROR_H_

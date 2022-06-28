@@ -19,10 +19,15 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_
 
     t->tcb_tf.regs[29] = USTACKTOP - 4 * BY2PG * thread_no;  // 设置栈指针
 	t->tcb_tf.pc = start_routine;  // 设置起始PC
-	t->tcb_tf.regs[29] -= 4;  // ?
+	// t->tcb_tf.regs[29] -= 4;  // ?
 	t->tcb_tf.regs[4] = arg;  // 传递给函数的参数
 	t->tcb_tf.regs[31] = exit;  // 线程的返回地址
-	t->tcb_detach_state = attr->detach_state;  // attr仅用来表示分离状态
+	if(attr == 0) {
+		t->tcb_detach_state = JOINABLE_STATE;
+	} else {
+		t->tcb_detach_state = attr->detach_state;  // attr仅用来表示分离状态
+	}
+	
 
 	syscall_set_thread_status(t->tcb_id, THREAD_RUNNABLE);
 	*thread = t->tcb_id;
