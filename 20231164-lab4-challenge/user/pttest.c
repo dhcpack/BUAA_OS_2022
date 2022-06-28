@@ -14,8 +14,10 @@ void *test(void *arg) {
 	writef("b is change\n");
 	while (1) {
 		writef("");
-		if (a != 1)
+		if (a != 1){
+			writef("%s\n", arg3);
 			break;
+		}
 	}
 	writef("a is %d\n",a);
 }
@@ -25,10 +27,11 @@ void umain() {
 	int c;
 	++a;
 	int thread;
+	char string[] = "test shared information";
 	int args[3];
 	args[0] = 1;
 	args[1] = 2;
-	args[2] = 3;
+	args[2] = string;
 	pthread_t son;
     pthread_attr_t attr;
 	pthread_attr_setdetachstate(&attr, JOINABLE_STATE);
@@ -37,8 +40,10 @@ void umain() {
 	if (!thread) {
 		while (1) {
 			writef("");
-			if (b != 0)
+			if (b != 0){
+				
 				break;
+			}
 		}
 		++a;
 		writef("I am out\n");	
