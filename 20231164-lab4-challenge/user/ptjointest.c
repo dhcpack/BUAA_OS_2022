@@ -54,8 +54,8 @@ void umain()
     pthread_t thread2;
     pthread_t thread3;
     pthread_t thread4;
-    pthread_detach(a[0]);
-    writef("pthread detach succeed\n");
+    // pthread_detach(a[0]);
+    // writef("pthread detach succeed\n");
     pthread_create(&thread1, &attr, test1, (void *)a);
     writef("pthread1 create succeed\n");
     pthread_create(&thread2, &attr, test2, (void *)a);
