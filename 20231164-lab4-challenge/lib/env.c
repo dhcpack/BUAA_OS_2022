@@ -14,7 +14,6 @@ struct Env *curenv = NULL;            // the current env
 struct Tcb *curtcb = NULL;
 
 static struct Env_list env_free_list;    // Free list
-struct Env_list env_sched_list[2];      // Runnable list
 struct Tcb_list tcb_sched_list[2];
 
 extern Pde *boot_pgdir;
@@ -142,8 +141,6 @@ env_init(void)
     int i;
     /* Step 1: Initialize env_free_list. */
     LIST_INIT(&env_free_list);
-    LIST_INIT(&env_sched_list[0]);
-    LIST_INIT(&env_sched_list[1]);
     LIST_INIT(&tcb_sched_list[0]);
     LIST_INIT(&tcb_sched_list[1]);
 
@@ -405,36 +402,6 @@ load_icode(struct Env *e, u_char *binary, u_int size)
 }
 
 /* Overview:
- *  调用env_alloc进行进程初始化，调用load_icode加载ELF，创建进程
- *  Allocate a new env with env_alloc, load the named elf binary into
- *  it with load_icode and then set its priority value. This function is
- *  ONLY called during kernel initialization, before running the FIRST
- *  user_mode environment.
- *
- * Hints:
- *  this function wraps the env_alloc and load_icode function.
- *  调用env_alloc进行进程初始化，调用load_icode加载ELF，创建进程
- */
-// /*** exercise 3.8 ***/
-// void
-// env_create_priority(u_char *binary, int size, int priority)
-// {
-//     struct Env *e;
-//     /* Step 1: Use env_alloc to alloc a new env. */
-//     if (env_alloc(&e, 0) != 0) {
-//         return;
-//     }
-
-//     /* Step 2: assign priority to the new env. */
-//     e->env_pri = priority;
-
-//     /* Step 3: Use load_icode() to load the named elf binary,
-//        and insert it into env_sched_list using LIST_INSERT_HEAD. */
-//     load_icode(e, binary, size);
-//     LIST_INSERT_HEAD(env_sched_list, e, env_sched_link);
-// //	printf("env_create id = %d\n", e->env_id);
-// }
-/* Overview:
  *  创建进程
  * Allocate a new env with default priority value.
  *
@@ -454,7 +421,6 @@ env_create(u_char *binary, int size)
     /* Step 3: Use load_icode() to load the named elf binary,
        and insert it into env_sched_list using LIST_INSERT_HEAD. */
     load_icode(e, binary, size);
-    LIST_INSERT_HEAD(env_sched_list, e, env_sched_link);
 }
 /* Overview:
  *  Free env e and all memory it uses.
@@ -500,7 +466,6 @@ env_free(struct Env *e)
     // 将进程加到free_list中，并在调度队列中删除进程
     // e->env_status = ENV_FREE;
     LIST_INSERT_HEAD(&env_free_list, e, env_link);
-    LIST_REMOVE(e, env_sched_link);
 }
 
 /* Overview:

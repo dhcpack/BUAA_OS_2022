@@ -65,7 +65,7 @@ struct Env {
 	// u_int env_status;               // Status of the environment  当前进程的状态 取值只能是ENV_FREE, ENV_NOT_RUNNABLE,ENV_RUNNABLE
 	Pde  *env_pgdir;                // Kernel virtual address of page dir 保存了该进程页目录的内核虚拟地址。
 	u_int env_cr3;                  // physical address of page dir  保存了该进程页目录的物理地址。
-	LIST_ENTRY(Env) env_sched_link; // env schedule link  构造调度队列
+	// LIST_ENTRY(Env) env_sched_link; // env schedule link  构造调度队列
     // u_int env_pri;                  // env priority  保存了该进程的优先级
 	
 	// Lab 4 IPC
@@ -111,7 +111,6 @@ LIST_HEAD(Tcb_list, Tcb);
 extern struct Env *envs;		  // All environments
 extern struct Env *curenv;	      // the current env
 extern struct Tcb *curtcb;        // the current tcb
-extern struct Env_list env_sched_list[2];  // runnable env list
 extern struct Tcb_list tcb_sched_list[2];  // runnable tcb list
 
 void env_init(void);
