@@ -144,11 +144,11 @@ int  sem_post(sem_t *sem);
 int  sem_getvalue(sem_t *sem, int *sval);
 
 // syscall_lib.c
-int syscall_thread_alloc();
-int syscall_thread_destroy(u_int threadid);
+int   syscall_thread_alloc();
+int   syscall_thread_destroy(u_int threadid);
 u_int syscall_get_threadid();
-int syscall_set_thread_status(u_int threadid, u_int status);
-int syscall_thread_join(u_int threadid, void **value_ptr);
+int   syscall_set_thread_status(u_int threadid, u_int status);
+int   syscall_thread_join(u_int threadid, void **value_ptr);
 
 #define user_assert(x)	\
 	do {	if (!(x)) user_panic("assertion failed: %s", #x); } while (0)

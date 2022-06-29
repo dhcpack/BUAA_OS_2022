@@ -30,6 +30,8 @@
 #define PTHREAD_CREATE_JOINABLE  0
 #define PTHREAD_CREATE_DETACHED  1
 
+#define PTHREAD_CANCELED       ((void *)(size_t) -1)
+
 struct Pthread_attr {
 	u_int detach_state;
 };

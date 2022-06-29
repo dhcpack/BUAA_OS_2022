@@ -512,7 +512,7 @@ int threadid2tcb(u_int threadid, struct Tcb **ptcb) {
 	t = &e->env_threads[threadid & 0x7];
 	if (t->tcb_status == ENV_FREE || t->tcb_id != threadid) {
 		*ptcb = 0;
-		return -E_BAD_TCB;
+		return -E_THREAD_NOT_FOUND;
 	}
 	*ptcb = t;
 	return 0;
