@@ -1,75 +1,52 @@
 #include "lib.h"
 
-void *test1(void *args)
+void *th2(void *args)
+{
+    writef("thread2 is working\n");
+    int i;
+    for (i = 0; i < 2;i++){
+        syscall_yield();
+    }
+}
+
+void *th3(void *args)
 {
     int r;
-    u_int father_threadid = ((u_int *)args)[0];
+    u_int thread1 = ((u_int *)args)[0];
+    u_int thread2 = ((u_int *)args)[1];
     u_int *ret;
-    writef("son1 is working\n");
-    if ((r = pthread_join(father_threadid, (void*)&ret)) < 0) {
-        writef("son1 fail join!\n");
-        pthread_exit(0);
-    }
-    syscall_yield();
-    writef("son1: father is end, ret is %d\n", ret);
-}
-
-void *test2(void *args)
-{
-    u_int father_threadid = ((u_int *)args)[0];
-    u_int *ret;
-    writef("son2 is working\n");
-    if (pthread_join(father_threadid, &ret) < 0) {
-        writef("son2 fail join!\n");
-        pthread_exit(0);
-    }
-    writef("son2: father is end, ret is %d\n", ret);
-}
-
-void *test3(void *args)
-{
-    u_int father_threadid = ((u_int *)args)[0];
-    u_int *ret;
-    writef("son3 is working\n");
-    if (pthread_join(father_threadid, &ret) < 0) {
-        writef("son3 fail join!\n");
-        pthread_exit(0);
-    }
-    writef("son3: father is end, ret is %d\n", ret);
-}
-
-void *test4(void *args)
-{
-    pthread_cancel(((u_int *)args)[0]);
+    r = pthread_join(thread1, (void *)&ret);  // 测试pthread_detach()
+    user_assert(r == -15);  // define in include\error.h: (#define E_THREAD_JOIN_FAIL  15  // detached thread cannot join)
+    writef("detach test1 succeed\n");
+    r = pthread_join(thread2, (void *)&ret);  // 测试初始设置是否成功
+    user_assert(r == -15); 
+    writef("detach test2 succeed\n");
+    writef("testpoint accepted!\n");
 }
 
 void umain()
 {
-    u_int a;
-    u_int ret = -2;
-    a = pthread_self();
+    int r = 0;
+    u_int ret = -23187;
+    u_int thread1 = pthread_self();
+    pthread_detach(thread1);
+
     pthread_attr_t attr;
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    pthread_t thread1;
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
     pthread_t thread2;
     pthread_t thread3;
-    pthread_t thread4;
-    pthread_detach(pthread_self());
-    writef("pthread detach succeed\n");
-    pthread_create(&thread1, &attr, test1, (void *)&a);
-    writef("pthread1 create succeed\n");
-    pthread_create(&thread2, &attr, test2, (void *)&a);
-    writef("pthread2 create succeed\n");
-    pthread_create(&thread3, &attr, test3, (void *)&a);
-    writef("pthread3 create succeed\n");
-    int b = 0;
-    while (b < 10) {
-        ++b;
-        writef("now b is %d\n", b);
+
+    r += pthread_create(&thread2, &attr, th2, NULL);
+    int args[2];
+    args[0] = thread1;
+    args[1] = thread2;
+    r += pthread_create(&thread3, NULL, th3, (void *)args);
+    user_assert(r == 0);
+    writef("thread create succeed\n");
+
+    int i;
+    for (i = 0; i < 2;i++){
         syscall_yield();
     }
-    // pthread_exit(&ret);
-    // pthread_setcancelstate(THREAD_CAN_BE_CANCELED,0);
-    // pthread_create(&thread4,NULL,test4,(void *)a);
-    // while (1);
 }

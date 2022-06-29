@@ -126,7 +126,7 @@ int pthread_join(pthread_t thread, void **retval){
 	struct Tcb *curtcb = &env->env_threads[pthread_self() & 0x7];
 	LIST_INSERT_HEAD(&t->tcb_joined_list, curtcb, tcb_joined_link);  // 当前线程加到t的join队列中
 	curtcb->join_times++;  // 当前线程的join次数++
-	// printf("tcb%x join times is %d\n",curtcb->tcb_id, curtcb->join_times);
+	writef("tcb %x blocked\n", curtcb->tcb_id);
 	curtcb->tcb_join_retval = retval;  // 保存该地址
 	if((r = syscall_set_thread_status(0, THREAD_NOT_RUNNABLE)) != 0) {  // 阻塞当前线程
 		return r;

@@ -1,53 +1,49 @@
 #include "lib.h"
-int a;
-int b;
-void *test(void *arg) {
-	int arg1 = ((int *)arg)[0];
-	int arg2 = ((int *)arg)[1];
-	int arg3 = ((int *)arg)[2];
-	int c;
-	writef("arg 1 is %d\n",arg1);
-	writef("arg 2 is %d\n",arg2);
-	writef("arg 3 is %d\n",arg3);
-	writef("a is %d\n",a);
-	++b;
-	writef("b is change\n");
+
+void *pttest(void *arg){
+	int *a = ((int *)arg)[0];
+	char *s = ((int *)arg)[1];
+	writef("a = %d, s = %s\n", *a, s);
+	user_assert(*a == 23187);
+	user_assert(strcmp(s, "test shared information") == 0);  // 第一次检查
+	writef("shared memory check1 succeed\n");
+	s[4] = "\0";
+	*a = 0;
+	writef("num set in pttest\n");
+
 	while (1) {
-		writef("");
-		if (a != 1){
-			writef("%s\n", arg3);
+		if(*a != 0){
+			break;
+		}
+		writef("a addr is %x\n", a);
+	}  // 第三次检查
+	writef("shared memory check3 succeed\n");
+	writef("testpoint accepted\n");
+}
+void umain() {
+	int r;
+	int num = 23187;
+	char string[] = "test shared information";  // 测试局部变量的共享
+	pthread_t thread;
+	pthread_attr_t attr;
+	pthread_attr_setdetachstate(&attr, JOINABLE_STATE);
+	int args[3];
+	args[0] = &num;  // 传递变量地址，检查地址空间是否共享
+	args[1] = string;
+
+	r = pthread_create(&thread, &attr, pttest, (void *)args);
+	user_assert(r == 0);
+	writef("thread create succeed\n");
+	writef("num addr is %x\n", &num);
+
+	while(1){
+		if(num != 23187){
 			break;
 		}
 	}
-	writef("a is %d\n",a);
+	writef("num is %d, string is %s\n", num, string);
+	user_assert(strcmp(string, "test") == 0);  // 第二次检查
+	writef("shared memory check2 succeed\n");
+	num = 1;
+	writef("num reset in umain\n");
 }
-void umain() {
-	a = 0;
-	b = 0;
-	int c;
-	++a;
-	int thread;
-	char string[] = "test shared information";
-	int args[3];
-	args[0] = 1;
-	args[1] = 2;
-	args[2] = string;
-	pthread_t son;
-    pthread_attr_t attr;
-	pthread_attr_setdetachstate(&attr, JOINABLE_STATE);
-	thread = pthread_create(&son, &attr, test, (void *) args);
-	writef("create successful\n");
-	if (!thread) {
-		while (1) {
-			writef("");
-			if (b != 0){
-				
-				break;
-			}
-		}
-		++a;
-		writef("I am out\n");	
-	}	
-}
-
-

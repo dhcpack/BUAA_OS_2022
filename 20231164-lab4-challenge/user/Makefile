@@ -25,6 +25,9 @@ all: tltest.x tltest.b \
 	pttest.x pttest.b \
 	ptjointest.x ptjointest.b \
 	ptdetachtest.x ptdetachtest.b \
+	ptexittest.x ptexittest.b \
+	ptcanceltest.x ptcanceltest.b \
+	semtrywaittest.x semtrywaittest.b \
 	semtest.x semtest.b \
 	$(USERLIB) entry.o syscall_wrap.o
 

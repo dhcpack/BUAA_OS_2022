@@ -66,6 +66,6 @@ void sched_yield(void)
     }
 
     count--;
-    // printf("count is %d\n", count);
+    // printf("run tcb %x\n", t->tcb_id);
     thread_run(t);
 }
