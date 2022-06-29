@@ -28,9 +28,12 @@ int sem_init(sem_t *sem, int pshared, unsigned int value) {
  */
 int sem_destroy(sem_t *sem) {
     if((sem->sem_envid != env->env_id) && (sem->sem_shared == THREAD_SEM)){
-        return -E_SEM_NOT_FOUND;
+        return -E_SEM_NOT_FOUND;  // 如果sem不是当前进程创建的，而且不是进程间公用的，返回-E_SEM_NOT_FOUND
     }
-    sem->sem_status = SEM_FREE;
+    if(sem->sem_wait_count != 0) {  // 如果还有进程在等待当前信号量，返回-E_SEM_STILL_USED
+        return -E_SEM_STILL_USED;
+    }
+    sem->sem_status = SEM_FREE;  // normal behavior 将sem标记为SEM_FREE
     return 0;
 }
 
@@ -54,7 +57,7 @@ int sem_wait(sem_t *sem){
     sem->sem_head_index = (sem->sem_head_index + 1) % MAX_WAIT_THREAD;
 	sem->sem_wait_count++;
     // writef("tcb %x wait begin\n", t->tcb_id);
-    syscall_set_thread_status(0, ENV_NOT_RUNNABLE);
+    syscall_set_thread_status(0, THREAD_NOT_RUNNABLE);
     syscall_yield();
     return 0;
 }

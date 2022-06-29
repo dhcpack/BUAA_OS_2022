@@ -32,19 +32,16 @@ void sched_yield(void)
      *  LIST_INSERT_TAIL, LIST_REMOVE, LIST_FIRST, LIST_EMPTY
      */
 	if(count == 0 || t == NULL || t->tcb_status != THREAD_RUNNABLE) {
-		if(t != NULL) {
-            // printf("dd\n");
-            if(t->tcb_status == THREAD_RUNNABLE){
-                LIST_REMOVE(t, tcb_sched_link);
-                // struct Tcb *tt = LIST_FIRST(&tcb_sched_list[point]);;
-                // while (tt!=NULL)
-                // {
-                //     printf("tcb id is %x\n", tt->tcb_id);
-                //     tt = LIST_NEXT(tt, tcb_sched_link);
-                // }
-                LIST_INSERT_TAIL(&tcb_sched_list[1 - point], t, tcb_sched_link);  // 在env_sched_list中操作节点要用env_sched_link
-            }
-		}
+        if(t != NULL && t->tcb_status == THREAD_RUNNABLE){
+            LIST_REMOVE(t, tcb_sched_link);
+            // struct Tcb *tt = LIST_FIRST(&tcb_sched_list[point]);;
+            // while (tt!=NULL)
+            // {
+            //     printf("tcb id is %x\n", tt->tcb_id);
+            //     tt = LIST_NEXT(tt, tcb_sched_link);
+            // }
+            LIST_INSERT_TAIL(&tcb_sched_list[1 - point], t, tcb_sched_link);  // 在env_sched_list中操作节点要用env_sched_link
+        }
 
         while(1) {
             while (LIST_EMPTY(&tcb_sched_list[point])) {

@@ -32,6 +32,7 @@
 #define E_SEM_NOT_FOUND  17  // sem not found in current env scope
 #define E_SEM_AGAIN     18  // semaphore value <= 0
 #define E_SEM_FREE      19  // action on a free semaphore
+#define E_SEM_STILL_USED 20
 #define MAXERROR 19 // TODO
 
 #endif // _ERROR_H_

@@ -97,15 +97,15 @@ struct Env {
 #define SEM_VALID  1
 
 struct Sem{
-	int sem_value;
-	int sem_shared;
-	int sem_status;
+	int sem_value;    // 信号量数值
+	int sem_shared;   // 信号量的share属性，取值为0时仅能在进程内部的线程间共享
+	int sem_status;   // 信号量状态: free or valid
 
-	u_int sem_envid;
-	u_int sem_wait_count;
+	u_int sem_envid;  // 信号量id
+	u_int sem_wait_count;  // 因等待该信号量而阻塞的线程数量
 	u_int sem_head_index;
-	u_int sem_tail_index;  // 循环队列
-	struct Tcb* sem_wait_list[MAX_WAIT_THREAD];  // 保存Tcb指针，所以是指针数组
+	u_int sem_tail_index;  // 构建循环队列时用到的头尾指针
+	struct Tcb* sem_wait_list[MAX_WAIT_THREAD];  // 保存等待该信号量的Tcb指针，是一个循环队列
 };
 
 LIST_HEAD(Env_list, Env);

@@ -569,35 +569,3 @@ int sys_set_thread_status(int sysno, u_int threadid, u_int status){
 	t->tcb_status = status;
 	return 0;
 }
-
-int sys_thread_join(int sysno, u_int threadid, void **retval){
-	struct Tcb *t;
-	int r;
-
-	if((r = threadid2tcb(threadid, &t)) != 0) {  // 当前线程等待t线程结束
-		return r;
-	}
-
-	if(t->tcb_detach_state != JOINABLE_STATE){
-		printf("Target thread is not joinable, join fained.\n");
-		return -E_THREAD_JOIN_FAIL;
-	}
-
-	if (t->tcb_status == THREAD_FREE) {  // 如果等待的线程已经结束，直接将retval指向线程的返回值
-		if (retval != 0) {
-			*retval = t->tcb_exit_ptr;
-		}
-		return 0;
-	}
-
-	LIST_INSERT_HEAD(&t->tcb_joined_list, curtcb, tcb_joined_link);  // 当前线程加到t的join队列中
-	curtcb->join_times++;  // 当前线程的join次数++
-	// printf("tcb%x join times is %d\n",curtcb->tcb_id, curtcb->join_times);
-	curtcb->tcb_join_retval = retval;  // 保存该地址
-	sys_set_thread_status(0, 0, THREAD_NOT_RUNNABLE);  // 阻塞当前进程
-	// struct Trapframe *trap = (struct Trapframe *)(KERNEL_SP - sizeof(struct Trapframe));
-	// trap->regs[2] = 0;
-	// trap->pc = trap->cp0_epc;
-	sys_yield();
-	return 0;
-}

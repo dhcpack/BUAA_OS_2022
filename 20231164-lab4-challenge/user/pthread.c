@@ -99,6 +99,12 @@ int pthread_cancel(pthread_t thread){
  * requirements:
  *  目标进程必须是joinable
  * 
+ * results:
+ * 	当前线程阻塞，等待thread线程运行完成
+ * 
+ * errors:
+ *  未找到线程: -E_THREAD_NOT_FOUND
+ *  线程处于分离状态: -E_THREAD_JOIN_FAIL
  */
 int pthread_join(pthread_t thread, void **retval){
     int r;
@@ -122,7 +128,7 @@ int pthread_join(pthread_t thread, void **retval){
 	curtcb->join_times++;  // 当前线程的join次数++
 	// printf("tcb%x join times is %d\n",curtcb->tcb_id, curtcb->join_times);
 	curtcb->tcb_join_retval = retval;  // 保存该地址
-	if((r = syscall_set_thread_status(0, THREAD_NOT_RUNNABLE)) != 0) {  // 阻塞当前进程
+	if((r = syscall_set_thread_status(0, THREAD_NOT_RUNNABLE)) != 0) {  // 阻塞当前线程
 		return r;
 	}
 	// struct Trapframe *trap = (struct Trapframe *)(KERNEL_SP - sizeof(struct Trapframe));
