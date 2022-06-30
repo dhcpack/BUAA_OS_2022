@@ -128,28 +128,30 @@ int	sync(void);
 // lab4-challenge
 // pthread.c
 int  pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
-void pthread_exit(void *retval);
-int  pthread_cancel(pthread_t thread);
 int  pthread_join(pthread_t thread, void **retval);
 int  pthread_detach(pthread_t thread);
 int  pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
+void pthread_exit(void *retval);
 pthread_t pthread_self(void);
 
 // pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
-int pthread_mutex_destroy(pthread_mutex_t *mutex);
-int pthread_mutex_lock(pthread_mutex_t *mutex);
-int pthread_mutex_trylock(pthread_mutex_t *mutex);
-int pthread_mutex_unlock(pthread_mutex_t *mutex);
+int  pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
+int  pthread_mutex_destroy(pthread_mutex_t *mutex);
+int  pthread_mutex_lock(pthread_mutex_t *mutex);
+int  pthread_mutex_trylock(pthread_mutex_t *mutex);
+int  pthread_mutex_unlock(pthread_mutex_t *mutex);
 
-int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared);
-int pthread_mutexattr_getpshared(pthread_mutexattr_t *attr, int *pshared);
-int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
-int pthread_mutexattr_gettype(pthread_mutexattr_t *attr, int *type);
-
-
-
+int  pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared);
+int  pthread_mutexattr_getpshared(pthread_mutexattr_t *attr, int *pshared);
+int  pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
+int  pthread_mutexattr_gettype(pthread_mutexattr_t *attr, int *type);
 // int pthread_mutex_timedlock(pthread_mutex_t *restrict mutex, const struct timespec *restrict abs_timeout);
+
+// pthread_cancel
+int  pthread_cancel(pthread_t thread);
+int  pthread_setcancelstate(int state, int *oldstate);
+int  pthread_setcanceltype(int type, int *oldtype);
+void pthread_testcancel(void);
 
 // sem.c
 int  sem_init(sem_t *sem, int pshared, unsigned int value);

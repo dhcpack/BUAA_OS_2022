@@ -27,6 +27,7 @@ all: tltest.x tltest.b \
 	ptdetachtest.x ptdetachtest.b \
 	ptexittest.x ptexittest.b \
 	ptcanceltest.x ptcanceltest.b \
+	ptcanceltesta.x ptcanceltesta.b \
 	ptmutextest.x ptmutextest.b \
 	ptmutextypetest.x ptmutextypetest.b \
 	semtrywaittest.x semtrywaittest.b \

@@ -30,10 +30,17 @@
 #define PTHREAD_CREATE_JOINABLE  0
 #define PTHREAD_CREATE_DETACHED  1
 
-#define PTHREAD_CANCELED       ((void *)(size_t) - 1)
-
 #define PTHREAD_INTERRUPT_ON        0
 #define PTHREAD_INTERRUPT_DISABLED  1
+
+#define PTHREAD_CANCEL_ENABLE   0
+#define PTHREAD_CANCEL_DISABLE  1
+
+#define PTHREAD_CANCEL_DEFERRED      0
+#define PTHREAD_CANCEL_ASYNCHRONOUS  1
+
+#define PTHREAD_NOT_CANCELED  0
+#define PTHREAD_CANCELED     ((void *)(size_t) - 1)
 
 struct Pthread_attr {
 	u_int detach_state;
@@ -58,8 +65,13 @@ struct Tcb{
 	void **tcb_join_retval;  // tcb_join_retval保存线程返回值应该保存到的地址(join线程执行完，将tcb_exit_ptr赋值给等待进程的该位置)
 	u_int join_times;  // 记录该线程join的次数，保证了等待所有线程结束才能继续运行
 
-	// tcb_detach
+	// tcb_detach information
 	u_int tcb_detach_state;
+
+	// tcb_cancel information
+	u_int tcb_cancelstate;
+	u_int tcb_canceltype;
+	u_int tcb_canceled;
 
 	// disable interrupts
 	u_int tcb_irq;  // define for sem

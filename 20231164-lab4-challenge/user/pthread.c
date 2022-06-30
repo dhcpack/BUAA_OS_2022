@@ -60,39 +60,6 @@ void pthread_exit(void *retval){
 
 /* 
  * parameter meanings:
- *	thread: 目标线程(接收终止信号的线程)
- * 
- * results:
- *  删除thread线程
- * 
- * errors:
- *  未找到线程: -E_THREAD_NOT_FOUND
- */
-int pthread_cancel(pthread_t thread){
-    int r;
-    struct Tcb *t = &env->env_threads[thread & 0x7];
-	if ((t->tcb_id != thread) || (t->tcb_status == THREAD_FREE)) {
-		return -E_THREAD_NOT_FOUND;
-	}
-	// if (t->tcb_cancelstate == THREAD_CANNOT_BE_CANCELED) {
-	// 	return -E_THREAD_CANNOTCANCEL;
-	// }
-	// t->tcb_exit_value = -THREAD_CANCELED_EXIT;
-	// if (t->tcb_canceltype == THREAD_CANCEL_IMI) {
-	// 	syscall_thread_destroy(thread);
-	// } else {
-	// 	t->tcb_canceled = 1;
-	// }
-	int retval = PTHREAD_CANCELED;
-	t->tcb_exit_ptr = &retval;
-	if((r = syscall_thread_destroy(thread)) != 0){
-        return r;
-    }
-    return 0;
-}
-
-/* 
- * parameter meanings:
  *  thread: 用于指定接收哪个线程的返回值；
  *  retval: 表示接收到的返回值
  * 
@@ -319,4 +286,83 @@ int pthread_mutexattr_gettype(pthread_mutexattr_t *attr , int *type) {
 	}
 	*type = attr->mutex_type;
 	return 0;
+}
+
+/* 
+ * parameter meanings:
+ *	thread: 目标线程(接收终止信号的线程)
+ * 
+ * results:
+ *  删除thread线程
+ * 
+ * errors:
+ *  未找到线程: -E_THREAD_NOT_FOUND
+ */
+// If a thread has disabled cancellation,
+// then a cancellation request remains queued until the thread enables cancellation. 
+// If a thread has enabled cancellation,
+// then its cancelability type determines when cancellation occurs.
+int pthread_cancel(pthread_t thread){
+	int retval = PTHREAD_CANCELED;
+	struct Tcb *t = &env->env_threads[thread & 0x7];
+	if(t->tcb_id != thread || t->tcb_status == THREAD_FREE) {
+		return -E_THREAD_NOT_FOUND;
+	}
+	if (t->tcb_cancelstate == PTHREAD_CANCEL_DISABLE || t->tcb_canceltype ==  PTHREAD_CANCEL_DEFERRED) {
+		t->tcb_canceled = PTHREAD_CANCELED;
+		t->tcb_exit_ptr = &retval;
+		return 0;
+	}
+	
+	t->tcb_exit_ptr = &retval;
+	return syscall_thread_destroy(thread);
+}
+
+int  pthread_setcancelstate(int state, int *oldstate) {
+	if(state != PTHREAD_CANCEL_ENABLE && state != PTHREAD_CANCEL_DISABLE) {
+		return -E_INVAL;
+	}
+	u_int threadid = pthread_self();
+	struct Tcb *t = &env->env_threads[threadid & 0x7];
+	if(t->tcb_id != threadid || t->tcb_status == THREAD_FREE) {
+		return -E_THREAD_NOT_FOUND;
+	}
+	if(oldstate != NULL) {
+		*oldstate = t->tcb_cancelstate;
+	}
+	t->tcb_cancelstate = state;
+	if(t->tcb_cancelstate == PTHREAD_CANCEL_ENABLE && t->tcb_canceled == PTHREAD_CANCELED && t->tcb_canceltype == PTHREAD_CANCEL_ASYNCHRONOUS) {
+		return syscall_thread_destroy(threadid);
+	}
+	return 0;
+}
+
+int  pthread_setcanceltype(int type, int *oldtype) {
+	if(type != PTHREAD_CANCEL_DEFERRED && type != PTHREAD_CANCEL_ASYNCHRONOUS) {
+		return -E_INVAL;
+	}
+	u_int threadid = pthread_self();
+	struct Tcb *t = &env->env_threads[threadid & 0x7];
+	if(t->tcb_id != threadid || t->tcb_status == THREAD_FREE) {
+		return -E_THREAD_NOT_FOUND;
+	}
+	if(oldtype != NULL) {
+		*oldtype = t->tcb_canceltype;
+	}
+	t->tcb_canceltype = type;
+	return 0;
+}
+
+void pthread_testcancel(void) {
+	u_int threadid = pthread_self();
+	struct Tcb *t = &env->env_threads[threadid & 0x7];
+	if(t->tcb_id != threadid || t->tcb_status == THREAD_FREE) {
+		return;
+	}
+	if(t->tcb_cancelstate == PTHREAD_CANCEL_DISABLE) {
+		return;
+	}
+	if(t->tcb_canceled == PTHREAD_CANCELED) {
+		syscall_thread_destroy(threadid);
+	}
 }

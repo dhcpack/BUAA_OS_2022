@@ -539,6 +539,9 @@ int thread_alloc(struct Env *e, struct Tcb **thread) {
     t->tcb_detach_state = JOINABLE_STATE;
     t->join_times = 0;
     t->tcb_irq = PTHREAD_INTERRUPT_ON;
+    t->tcb_canceled = PTHREAD_NOT_CANCELED;
+    t->tcb_cancelstate = PTHREAD_CANCEL_ENABLE;
+    t->tcb_canceltype = PTHREAD_CANCEL_DEFERRED;
     LIST_INIT(&t->tcb_joined_list);
     *thread = t;
     printf("Thread alloc succeed! Thread id is 0x%x\n", t->tcb_id);

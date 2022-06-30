@@ -24,8 +24,9 @@ void mips_init()
 	// ENV_CREATE(user_ptjointest);
 	// ENV_CREATE(user_ptdetachtest);
 	// ENV_CREATE(user_ptcanceltest);
+	ENV_CREATE(user_ptcanceltesta);
 	// ENV_CREATE(user_ptmutextest);
-	ENV_CREATE(user_ptmutextypetest);
+	// ENV_CREATE(user_ptmutextypetest);
 	// ENV_CREATE(user_semtest);
 	// ENV_CREATE(user_semtrywaittest);
 
