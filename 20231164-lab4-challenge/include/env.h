@@ -32,6 +32,9 @@
 
 #define PTHREAD_CANCELED       ((void *)(size_t) - 1)
 
+#define PTHREAD_INTERRUPT_ON        0
+#define PTHREAD_INTERRUPT_DISABLED  1
+
 struct Pthread_attr {
 	u_int detach_state;
 };
@@ -57,6 +60,9 @@ struct Tcb{
 
 	// tcb_detach
 	u_int tcb_detach_state;
+
+	// disable interrupts
+	u_int tcb_irq;  // define for sem
 };
 
 struct Env {
@@ -91,12 +97,12 @@ struct Env {
 	struct Tcb env_threads[MAX_THREAD];  // threads of this env(max num is 8)  直接构造出来Thread，所以是Tcb数组
 };
 
-#define THREAD_SEM  0  // sem_shared取值为THREAD_SEM时信号量只能在线程间共享
+#define SEM_PROCESS_PRIVATE  0  // sem_shared取值为SEM_PROCESS_PRIVATE时信号量只能在线程间共享
 #define MAX_WAIT_THREAD  8
 #define SEM_FREE   0
 #define SEM_VALID  1
 
-struct Sem{
+struct Sem {
 	int sem_value;    // 信号量数值
 	int sem_shared;   // 信号量的share属性，取值为0时仅能在进程内部的线程间共享
 	int sem_status;   // 信号量状态: free or valid
@@ -107,6 +113,34 @@ struct Sem{
 	u_int sem_tail_index;  // 构建循环队列时用到的头尾指针
 	struct Tcb* sem_wait_list[MAX_WAIT_THREAD];  // 保存等待该信号量的Tcb指针，是一个循环队列
 };
+
+// #define PTHREAD_MUTEX_DEFAULT     0
+// #define PTHREAD_MUTEX_NORMAL      1
+#define PTHREAD_MUTEX_ERRORCHECK  0
+#define PTHREAD_MUTEX_RECURSIVE   1
+
+#define MUTEX_PROCESS_SHARED    0
+#define MUTEX_PROCESS_PRIVATE   1
+
+#define MUTEX_FREE      0
+#define MUTEX_LOCKING   1
+#define MUTEX_UNLOCKING 2
+
+struct pthread_mutexattr {
+	u_int mutex_type;
+	u_int pshared;
+};
+
+struct pthread_mutex {
+	struct Sem *sem;
+	u_int status;    // 1表示lock状态
+	u_int envid;     // mutex所属进程 
+	u_int mutex_type;
+	u_int mutex_owner;  // mutex的拥有者(线程)
+	u_int pshared;
+	u_int reference_times;  // define for recursive mutex
+};
+
 
 LIST_HEAD(Env_list, Env);
 LIST_HEAD(Tcb_list, Tcb);

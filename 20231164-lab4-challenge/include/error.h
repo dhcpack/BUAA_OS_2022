@@ -33,6 +33,13 @@
 #define E_SEM_AGAIN     18  // semaphore value <= 0
 #define E_SEM_FREE      19  // action on a free semaphore
 #define E_SEM_STILL_USED 20
-#define MAXERROR 19 // TODO
 
+// mutex
+#define E_MUTEX_USING      21  // 互斥锁正在被使用
+#define E_MUTEX_NOT_FOUND  22  // 互斥锁未找到
+#define E_MUTEX_AGAIN      23  // trylock但无法得到锁报错
+#define E_MUTEX_UNLOCK_FAIL  24
+#define E_MUTEX_DEADLOCK   25
+
+#define MAXERROR 19 // TODO
 #endif // _ERROR_H_

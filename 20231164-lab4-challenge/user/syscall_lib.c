@@ -94,3 +94,8 @@ int syscall_set_thread_status(u_int threadid, u_int status)
 {
 	return msyscall(SYS_set_thread_status, threadid, status, 0, 0, 0);
 }
+
+int syscall_set_thread_interrupt(u_int threadid, u_int interrupt)
+{
+	return msyscall(SYS_set_thread_interrupt, threadid, interrupt, 0, 0, 0);
+}

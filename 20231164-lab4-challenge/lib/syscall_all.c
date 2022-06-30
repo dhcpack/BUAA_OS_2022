@@ -569,3 +569,17 @@ int sys_set_thread_status(int sysno, u_int threadid, u_int status){
 	t->tcb_status = status;
 	return 0;
 }
+
+int sys_set_thread_interrupt(int sysno, u_int threadid, u_int interrupt) {
+	struct Tcb *t;
+	int r;
+
+	if(interrupt != PTHREAD_INTERRUPT_ON && interrupt != PTHREAD_INTERRUPT_DISABLED) {
+		return -E_INVAL;
+	}
+	if((r = threadid2tcb(threadid, &t) != 0)){
+		return r;
+	}
+	t->tcb_irq = interrupt;
+	return 0;
+}

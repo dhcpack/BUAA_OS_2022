@@ -135,6 +135,20 @@ int  pthread_detach(pthread_t thread);
 int  pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 pthread_t pthread_self(void);
 
+// pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared);
+int pthread_mutexattr_getpshared(pthread_mutexattr_t *attr, int *pshared);
+int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
+int pthread_mutexattr_gettype(pthread_mutexattr_t *attr, int *type);
+
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
+int pthread_mutex_destroy(pthread_mutex_t *mutex);
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
+int pthread_mutex_unlock(pthread_mutex_t *mutex);
+
+// int pthread_mutex_timedlock(pthread_mutex_t *restrict mutex, const struct timespec *restrict abs_timeout);
+
 // sem.c
 int  sem_init(sem_t *sem, int pshared, unsigned int value);
 int  sem_destroy(sem_t *sem);
@@ -144,10 +158,11 @@ int  sem_post(sem_t *sem);
 int  sem_getvalue(sem_t *sem, int *sval);
 
 // syscall_lib.c
+u_int syscall_get_threadid();
 int   syscall_thread_alloc();
 int   syscall_thread_destroy(u_int threadid);
-u_int syscall_get_threadid();
 int   syscall_set_thread_status(u_int threadid, u_int status);
+int   syscall_set_thread_interrupt(u_int threadid, u_int interrupt);
 
 #define user_assert(x)	\
 	do {	if (!(x)) user_panic("assertion failed: %s", #x); } while (0)

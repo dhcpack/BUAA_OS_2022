@@ -126,7 +126,6 @@ int pthread_join(pthread_t thread, void **retval){
 	struct Tcb *curtcb = &env->env_threads[pthread_self() & 0x7];
 	LIST_INSERT_HEAD(&t->tcb_joined_list, curtcb, tcb_joined_link);  // 当前线程加到t的join队列中
 	curtcb->join_times++;  // 当前线程的join次数++
-	writef("tcb %x blocked\n", curtcb->tcb_id);
 	curtcb->tcb_join_retval = retval;  // 保存该地址
 	if((r = syscall_set_thread_status(0, THREAD_NOT_RUNNABLE)) != 0) {  // 阻塞当前线程
 		return r;
@@ -187,4 +186,147 @@ int pthread_attr_setdetachstate(pthread_attr_t * attr, int detachstate) {
  */
 pthread_t pthread_self(void) {
 	return syscall_get_threadid();
+}
+
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) {
+	int r;
+	sem_t sem;
+	if(r = sem_init(&sem, 0, 1) != 0){
+		return r;
+	}
+	mutex->sem = &sem;
+	mutex->reference_times = 0;
+	mutex->envid = env->env_id;
+	if(attr == NULL) {
+		mutex->mutex_type = PTHREAD_MUTEX_ERRORCHECK;
+		mutex->pshared = MUTEX_PROCESS_PRIVATE;
+	} else {
+		mutex->mutex_type = attr->mutex_type;
+		mutex->pshared = attr->pshared;
+	}
+	mutex->status = MUTEX_UNLOCKING;
+	writef("init tail index is %d\n", mutex->sem->sem_tail_index);
+	writef("init head index is %d\n", mutex->sem->sem_head_index);
+	return 0;
+}
+
+int pthread_mutex_destroy(pthread_mutex_t *mutex) {
+	if(mutex->envid != env->env_id && mutex->pshared != MUTEX_PROCESS_SHARED){
+		return -E_MUTEX_NOT_FOUND;
+	}
+	if(mutex->status == MUTEX_LOCKING){
+		return -E_MUTEX_USING;
+	}
+	if (mutex->status == MUTEX_FREE) {
+		return 0;
+	}
+	mutex->status = MUTEX_FREE;
+	return sem_destroy(mutex->sem);
+}
+
+int pthread_mutex_lock(pthread_mutex_t *mutex) {
+	if(mutex->envid != env->env_id && mutex->pshared != MUTEX_PROCESS_SHARED){
+		return -E_MUTEX_NOT_FOUND;
+	}
+	if(mutex->status == MUTEX_FREE){
+		return -E_MUTEX_NOT_FOUND;
+	}
+	if(mutex->status == MUTEX_UNLOCKING) {
+		mutex->reference_times++;
+		mutex->mutex_owner = pthread_self();
+		mutex->status = MUTEX_LOCKING;
+		return sem_wait(mutex->sem);
+	}
+	if(mutex->mutex_type == PTHREAD_MUTEX_RECURSIVE && mutex->mutex_owner == pthread_self()) {
+		mutex->reference_times++;
+		return 0;
+	}
+	if(mutex->mutex_type == PTHREAD_MUTEX_ERRORCHECK && mutex->mutex_owner == pthread_self()){
+		return -E_MUTEX_DEADLOCK;
+	}
+	return sem_wait(mutex->sem);
+}
+
+int pthread_mutex_trylock(pthread_mutex_t *mutex) {
+	if(mutex->envid != env->env_id && mutex->pshared != MUTEX_PROCESS_SHARED){
+		return -E_MUTEX_NOT_FOUND;
+	}
+	if(mutex->status == MUTEX_FREE){
+		return -E_MUTEX_NOT_FOUND;
+	}
+	if(mutex->status == MUTEX_UNLOCKING) {
+		mutex->reference_times++;
+		mutex->mutex_owner = pthread_self();
+		mutex->status = MUTEX_LOCKING;
+		return 0;
+	}
+	if(mutex->mutex_type == PTHREAD_MUTEX_RECURSIVE && mutex->mutex_owner == pthread_self()) {
+		mutex->reference_times++;
+		return 0;
+	}
+	return -E_MUTEX_AGAIN;
+}
+
+int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+	if(mutex->envid != env->env_id && mutex->pshared != MUTEX_PROCESS_SHARED){
+		return -E_MUTEX_NOT_FOUND;
+	}
+	if(mutex->status == MUTEX_FREE){
+		return -E_MUTEX_NOT_FOUND;
+	}
+	if(mutex->status == MUTEX_UNLOCKING || mutex->mutex_owner != pthread_self()){
+		return -E_MUTEX_UNLOCK_FAIL;
+	}
+	mutex->reference_times--;
+	if(mutex->reference_times == 0) {
+		writef("reference times is 0\n");
+		writef("wait count is %d\n", mutex->sem->sem_wait_count);
+		if(mutex->sem->sem_wait_count == 0) {
+			mutex->status = MUTEX_UNLOCKING;
+		} else {
+			mutex->reference_times++;
+			writef("tail index is %d\n", mutex->sem->sem_tail_index);
+			writef("head index is %d\n", mutex->sem->sem_head_index);
+			writef("%x\n", mutex->sem->sem_wait_list[mutex->sem->sem_tail_index]);
+			mutex->mutex_owner = mutex->sem->sem_wait_list[mutex->sem->sem_tail_index]->tcb_id;
+			writef("new tcbid is %x\n", mutex->mutex_owner);
+		}
+		return sem_post(mutex->sem);
+	}
+	return 0;
+}
+
+int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr,int pshared) {
+	if(attr == NULL){
+		return -E_INVAL;
+	}
+	if(pshared != MUTEX_PROCESS_PRIVATE && pshared != MUTEX_PROCESS_SHARED)
+	attr->pshared = pshared;
+	return 0;
+}
+int pthread_mutexattr_getpshared(pthread_mutexattr_t *attr,int *pshared) {
+	if(attr == NULL || pshared == NULL){
+		return -E_INVAL;
+	}
+	*pshared = attr->pshared;
+	return 0;
+}
+
+int pthread_mutexattr_settype(pthread_mutexattr_t *attr , int type) {
+	if(attr == NULL){
+		return -E_INVAL;
+	}
+	if(type != PTHREAD_MUTEX_ERRORCHECK && type != PTHREAD_MUTEX_RECURSIVE){
+		return -E_INVAL;
+	}
+	attr->mutex_type = type;
+	return 0;
+} 
+
+int pthread_mutexattr_gettype(pthread_mutexattr_t *attr , int *type) {
+	if(attr == NULL || type == NULL){
+		return -E_INVAL;
+	}
+	*type = attr->mutex_type;
+	return 0;
 }

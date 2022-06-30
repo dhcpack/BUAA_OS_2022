@@ -20,9 +20,12 @@ void mips_init()
 	// ENV_CREATE(user_fktest);
 	// ENV_CREATE(user_pingpong);
 	// ENV_CREATE(user_pttest);
+	// ENV_CREATE(user_pttestco);
 	// ENV_CREATE(user_ptexittest);
 	// ENV_CREATE(user_ptdetachtest);
-	ENV_CREATE(user_ptcanceltest);
+	// ENV_CREATE(user_ptcanceltest);
+	// ENV_CREATE(user_ptmutextest);
+	ENV_CREATE(user_ptmutextypetest);
 	// ENV_CREATE(user_semtest);
 	// ENV_CREATE(user_semtrywaittest);
 

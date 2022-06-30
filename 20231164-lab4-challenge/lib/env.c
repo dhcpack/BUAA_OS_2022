@@ -538,6 +538,7 @@ int thread_alloc(struct Env *e, struct Tcb **thread) {
     t->tcb_exit_ptr = (void *)0;
     t->tcb_detach_state = JOINABLE_STATE;
     t->join_times = 0;
+    t->tcb_irq = PTHREAD_INTERRUPT_ON;
     LIST_INIT(&t->tcb_joined_list);
     *thread = t;
     printf("Thread alloc succeed! Thread id is 0x%x\n", t->tcb_id);
@@ -583,7 +584,7 @@ void thread_destroy(struct Tcb *t) {
 }
 
 void thread_run(struct Tcb *t) {
-    if(curtcb) {  // 此时当前进程已经被时钟中断了，将上下文环境从TIMESTACK拷贝到TrapFrame中保存起来 ？？？
+    if(curtcb) {  // 此时当前进程已经被时钟中断了，将上下文环境从TIMESTACK拷贝到TrapFrame中保存起来
         struct Trapframe *tf = (struct Trapframe *)(TIMESTACK - sizeof(struct Trapframe));
         bcopy((void *)tf, // source: TIMESTACK区域存储中断时的CPU寄存器
               (void *)(&(curtcb->tcb_tf)), sizeof(struct Trapframe));  // target: 当前进程的env_tf区域
