@@ -132,7 +132,7 @@ struct pthread_mutexattr {
 };
 
 struct pthread_mutex {
-	struct Sem *sem;
+	struct Sem sem;
 	u_int status;    // 1表示lock状态
 	u_int envid;     // mutex所属进程 
 	u_int mutex_type;

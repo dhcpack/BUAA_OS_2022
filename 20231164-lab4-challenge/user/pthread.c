@@ -190,11 +190,9 @@ pthread_t pthread_self(void) {
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) {
 	int r;
-	sem_t sem;
-	if(r = sem_init(&sem, 0, 1) != 0){
+	if(r = sem_init(&mutex->sem, 0, 1) != 0){
 		return r;
 	}
-	mutex->sem = &sem;
 	mutex->reference_times = 0;
 	mutex->envid = env->env_id;
 	if(attr == NULL) {
@@ -205,8 +203,6 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
 		mutex->pshared = attr->pshared;
 	}
 	mutex->status = MUTEX_UNLOCKING;
-	writef("init tail index is %d\n", mutex->sem->sem_tail_index);
-	writef("init head index is %d\n", mutex->sem->sem_head_index);
 	return 0;
 }
 
@@ -221,7 +217,7 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex) {
 		return 0;
 	}
 	mutex->status = MUTEX_FREE;
-	return sem_destroy(mutex->sem);
+	return sem_destroy(&mutex->sem);
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) {
@@ -235,7 +231,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) {
 		mutex->reference_times++;
 		mutex->mutex_owner = pthread_self();
 		mutex->status = MUTEX_LOCKING;
-		return sem_wait(mutex->sem);
+		return sem_wait(&mutex->sem);
 	}
 	if(mutex->mutex_type == PTHREAD_MUTEX_RECURSIVE && mutex->mutex_owner == pthread_self()) {
 		mutex->reference_times++;
@@ -244,7 +240,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) {
 	if(mutex->mutex_type == PTHREAD_MUTEX_ERRORCHECK && mutex->mutex_owner == pthread_self()){
 		return -E_MUTEX_DEADLOCK;
 	}
-	return sem_wait(mutex->sem);
+	return sem_wait(&mutex->sem);
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mutex) {
@@ -279,19 +275,13 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) {
 	}
 	mutex->reference_times--;
 	if(mutex->reference_times == 0) {
-		writef("reference times is 0\n");
-		writef("wait count is %d\n", mutex->sem->sem_wait_count);
-		if(mutex->sem->sem_wait_count == 0) {
+		if(mutex->sem.sem_wait_count == 0) {
 			mutex->status = MUTEX_UNLOCKING;
 		} else {
 			mutex->reference_times++;
-			writef("tail index is %d\n", mutex->sem->sem_tail_index);
-			writef("head index is %d\n", mutex->sem->sem_head_index);
-			writef("%x\n", mutex->sem->sem_wait_list[mutex->sem->sem_tail_index]);
-			mutex->mutex_owner = mutex->sem->sem_wait_list[mutex->sem->sem_tail_index]->tcb_id;
-			writef("new tcbid is %x\n", mutex->mutex_owner);
+			mutex->mutex_owner = mutex->sem.sem_wait_list[mutex->sem.sem_tail_index]->tcb_id;
 		}
-		return sem_post(mutex->sem);
+		return sem_post(&mutex->sem);
 	}
 	return 0;
 }

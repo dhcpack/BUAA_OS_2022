@@ -12,29 +12,21 @@ void *th1(void *args) {
 
     r = pthread_mutex_lock(recursivelock);
     user_assert(r == 0);
-	writef("lock tail index is %d\n", recursivelock->sem->sem_tail_index);
-	writef("lock head index is %d\n", recursivelock->sem->sem_head_index);
     writef("recursive_lock lock twice in thread 1\n");
     syscall_yield();
 
     r = pthread_mutex_unlock(recursivelock);
     user_assert(r == 0);
-	writef("lock tail index is %d\n", recursivelock->sem->sem_tail_index);
-	writef("lock head index is %d\n", recursivelock->sem->sem_head_index);
     writef("recursive_lock unlock once in thread 1\n");
     syscall_yield();
 
     r = pthread_mutex_unlock(recursivelock);
     user_assert(r == 0);
-	writef("lock tail index is %d\n", recursivelock->sem->sem_tail_index);
-	writef("lock head index is %d\n", recursivelock->sem->sem_head_index);
     writef("recursive_lock unlock twice in thread 1\n");
     syscall_yield();
 
     r = pthread_mutex_unlock(recursivelock);
     user_assert(r == -24);  // E_UNLOCK_FAIL
-	writef("lock tail index is %d\n", recursivelock->sem->sem_tail_index);
-	writef("lock head index is %d\n", recursivelock->sem->sem_head_index);
     writef("recursive lock check succeed\n");
     syscall_yield();
 
@@ -63,8 +55,6 @@ void *th2(void *args) {
     pthread_mutex_t *recursivelock = (pthread_mutex_t *)((u_int *)args)[1];
     int r;
     writef("thread 2 wants recursive lock\n");
-	writef("lock tail index is %d\n", recursivelock->sem->sem_tail_index);
-	writef("lock head index is %d\n", recursivelock->sem->sem_head_index);
     r = pthread_mutex_lock(recursivelock);
     writef("thread2 get recursive lock\n");
     user_assert(r == 0);
