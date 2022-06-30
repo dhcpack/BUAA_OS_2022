@@ -6,17 +6,19 @@ void *pttest(void *arg){
 	writef("a = %d, s = %s\n", *a, s);
 	user_assert(*a == 23187);
 	user_assert(strcmp(s, "test shared information") == 0);  // 第一次检查
+	writef("pttest get correct information\n");
 	writef("shared memory check1 succeed\n");
 	s[4] = "\0";
 	*a = 0;
-	writef("num set in pttest\n");
+	writef("num and s set in pttest\n");
 
 	while (1) {
 		if(*a != 0){
 			break;
 		}
-		writef("a addr is %x\n", a);
+		syscall_yield();
 	}  // 第三次检查
+	writef("pttest detect changes\n");
 	writef("shared memory check3 succeed\n");
 	writef("testpoint accepted\n");
 }
@@ -40,9 +42,11 @@ void umain() {
 		if(num != 23187){
 			break;
 		}
+		syscall_yield();
 	}
 	writef("num is %d, string is %s\n", num, string);
 	user_assert(strcmp(string, "test") == 0);  // 第二次检查
+	writef("umain detects changes\n");
 	writef("shared memory check2 succeed\n");
 	num = 1;
 	writef("num reset in umain\n");

@@ -8,7 +8,8 @@ void *th2(void *args)
     r = pthread_join(thread1, (void *)&ret);
     user_assert(r == 0);
     user_assert(*ret == -23187);
-    writef("thread 2 join test succeed\n");
+    writef("thread2 get thread1's ret successfully\n");
+    writef("thread2 join test succeed\n");
     syscall_yield();
 }
 
@@ -20,7 +21,8 @@ void *th3(void *args)
     r = pthread_join(thread1, (void *)&ret);
     user_assert(r == 0);
     user_assert(*ret == -23187);
-    writef("thread 3 join test succeed\n");
+    writef("thread3 get thread1's ret successfully\n");
+    writef("thread3 join test succeed\n");
     int b = 0;
     while (b < 3) {
         ++b;
@@ -28,8 +30,8 @@ void *th3(void *args)
         syscall_yield();
     }
     *ret = -99999;
+    writef("thread3 finish, exit with %d\n", *ret);
     pthread_exit(ret);
-    syscall_yield();
 }
 
 void *th4(void *args)
@@ -40,9 +42,9 @@ void *th4(void *args)
     r = pthread_join(thread3, (void *)&ret);
     user_assert(r == 0);
     user_assert(*ret == -99999);
-    writef("thread 4 join test succeed\n");
+    writef("thread4 get thread3's ret successfully\n");
+    writef("thread4 join test succeed\n");
     writef("test point accepted\n");
-    syscall_yield();
 }
 
 void umain()
@@ -72,6 +74,6 @@ void umain()
         writef("thread1 is %d\n", b);
         syscall_yield();
     }
-
+    writef("thread1 finish, exit with %d\n", ret);
     pthread_exit(&ret);
 }

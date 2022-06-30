@@ -20,8 +20,8 @@ void mips_init()
 	// ENV_CREATE(user_fktest);
 	// ENV_CREATE(user_pingpong);
 	// ENV_CREATE(user_pttest);
-	// ENV_CREATE(user_pttestco);
 	// ENV_CREATE(user_ptexittest);
+	// ENV_CREATE(user_ptjointest);
 	// ENV_CREATE(user_ptdetachtest);
 	// ENV_CREATE(user_ptcanceltest);
 	// ENV_CREATE(user_ptmutextest);
@@ -29,10 +29,9 @@ void mips_init()
 	// ENV_CREATE(user_semtest);
 	// ENV_CREATE(user_semtrywaittest);
 
-	// ENV_CREATE(user_ptjointest);
+
 	// ENV_CREATE(user_ptstacktest);
 
-	// ENV_CREATE(user_ptcanceltest);
 
 
 	// ENV_CREATE(user_seller);

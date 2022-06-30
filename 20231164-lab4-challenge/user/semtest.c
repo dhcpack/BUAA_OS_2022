@@ -4,10 +4,10 @@ void *test1(void *args) {
 	sem_t *sem = (sem_t *)((u_int *)args)[1];
 	int a;
 	int r;
-	for (a = 0; a < 2; ++a) {
+	for (a = 1; a <= 2; ++a) {
 		r = sem_wait(sem);
 		user_assert(r == 0);
-		writef("son1 P! now a is %d\n", a);
+		writef("thread1 P time is %d\n", a);
 	}
 	writef("thread1 finish!\n");
 }
@@ -16,10 +16,10 @@ void *test2(void *args) {
 	sem_t *sem = (sem_t *)((u_int *)args)[1];
 	int b;
 	int r;
-	for (b = 0; b < 3; ++b) {
+	for (b = 1; b <= 3; ++b) {
 		r = sem_wait(sem);
 		user_assert(r == 0);
-		writef("son2 P! now b is %d\n", b);
+		writef("thread2 P time is %d\n", b);
 	}
 	writef("thread2 finish\n");
 }
@@ -28,10 +28,10 @@ void *test3(void *args) {
 	sem_t *sem = (sem_t *)((u_int *)args)[1];
 	int c;
 	int r;
-	for (c = 0; c < 5; ++c) {
+	for (c = 1; c <= 5; ++c) {
 		r = sem_wait(sem);
 		user_assert(r == 0);
-		writef("son3 P! now c is %d\n", c);
+		writef("thread3 P time is %d\n", c);
 	}
 	writef("thread3 finish\n");
 	int value;
@@ -49,27 +49,26 @@ void umain()
 	pthread_t thread2;
 	pthread_t thread3;
 
+	int r, value;
 	sem_t sem;
 	sem_init(&sem, 0, 1);
+	r = sem_getvalue(&sem, &value);
+	user_assert(r == 0);
+	writef("sem create succeed\n");
+
 	a[1] = &sem;
-	int r, value;
-	r = 0;
 	r += pthread_create(&thread1, NULL, test1, (void *)a);
 	r += pthread_create(&thread2, NULL, test2, (void *)a);
 	r += pthread_create(&thread3, NULL, test3, (void *)a);
 	user_assert(r == 0);
 	writef("thread create succeed!\n");
 
-	r = sem_getvalue(&sem, &value);
-	user_assert(r == 0);
-	writef("sem create succeed\n");
-
-	int i = 0;
-	for (i = 0; i < 9; ++i) {
+	int i;
+	for (i = 1; i < 10; ++i) {
 		while (value >= 0) {
 			sem_getvalue(&sem, &value);
 		}
-		writef("father post!\n");
+		writef("umain V time is %d\n", i);
 		sem_post(&sem);
 		syscall_yield();
 	}
